@@ -58,5 +58,7 @@ LEIA_COMMON_OPENGL_API
 bool UpdateBuffers(int newWidth, int newHeight, int newCount, int& width, int& height, int& count, GLuint* textures, GLuint* depthBuffers, GLuint* renderTargets, bool isProtectedBuffer = false);
 LEIA_COMMON_OPENGL_API
 void CreateRectangularTexCoordVertexArray(float left, float bottom, float top, float right, GLuint& vertexArray, GLuint& vertexBuffer, GLuint& indexBuffer);
+LEIA_COMMON_OPENGL_API
+bool ContextExists();
 
 } // namespace leia::opengl

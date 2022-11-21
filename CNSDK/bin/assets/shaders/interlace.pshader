@@ -252,9 +252,9 @@ float4 sample_view(float2 uv, int viewIndex)
     //       - OPTIONAL: apply x-scaling to avoid de-occlusions on sides (zoomX)
     //       - OPTIONAL: apply additional y-scaling to conserve image aspect ratio (zoomXY)
 
-    float isLeft = actualSoftwareView; // Careful we want more L than R when numView is odd
+    float isRight = actualSoftwareView;
 
-    uv.x = (1.0 - reconvergenceZoomX * absReconvergenceAmount) * (uv.x - 0.5) + 0.5 + 0.5 * (2.0 * isLeft - 1.0) * reconvergenceAmount; // zoom in x only
+    uv.x = (1.0 - reconvergenceZoomX * absReconvergenceAmount) * (uv.x - 0.5) + 0.5 + (0.5 - isRight) * reconvergenceAmount; // zoom in x only
 
     uv.y = (1.0 - reconvergenceZoomY * absReconvergenceAmount) * (uv.y - 0.5) + 0.5; // uncomment to add zoom in y direction to conserve image aspect ratio
 #endif

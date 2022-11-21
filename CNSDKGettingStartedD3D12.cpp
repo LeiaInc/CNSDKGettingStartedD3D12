@@ -29,8 +29,7 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-//#pragma comment(lib, "dxguid.lib")
-
+#pragma comment(lib, "dxguid.lib")
 
 #ifndef SAFE_RELEASE
 #define SAFE_RELEASE(x) if(x != nullptr) { x->Release(); x = nullptr; }
@@ -45,75 +44,77 @@ const wchar_t*                  g_windowTitle       = L"CNSDK Getting Started D3
 const wchar_t*                  g_windowClass       = L"CNSDKGettingStartedD3D12WindowClass";
 int                             g_windowWidth       = 1280;
 int                             g_windowHeight      = 720;
-bool                            g_fullscreen        = false;//false;
+bool                            g_fullscreen        = true;
 leia::sdk::ILeiaSDK*            g_sdk               = nullptr;
 leia::sdk::IThreadedInterlacer* g_interlacer        = nullptr;
 eDemoMode                       g_demoMode          = eDemoMode::Spinning3DCube;
 
 // Global D3D12 Variables.
-const int                     g_frameCount                      = 2;
+const int                     g_frameCount                        = 2;
 
-ID3D12Device*                 g_device                          = nullptr;
-ID3D12CommandQueue*           g_commandQueue                    = nullptr;
-ID3D12CommandAllocator*       g_commandAllocator[g_frameCount]  = {};
+ID3D12Device*                 g_device                            = nullptr;
+ID3D12CommandQueue*           g_commandQueue                      = nullptr;
+ID3D12CommandAllocator*       g_commandAllocator[g_frameCount]    = {};
 
-IDXGISwapChain3*              g_swapChain                       = nullptr;
-int                           g_frameIndex                      = 0;
-DXGI_FORMAT                   g_swapChainFormat                 = DXGI_FORMAT_R8G8B8A8_UNORM;
+IDXGISwapChain3*              g_swapChain                         = nullptr;
+int                           g_frameIndex                        = 0;
+DXGI_FORMAT                   g_swapChainFormat                   = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-ID3D12DescriptorHeap*         g_srvHeap                         = nullptr;
-D3D12_CPU_DESCRIPTOR_HANDLE   g_srvFontCpuDescHandle            = {};
-D3D12_GPU_DESCRIPTOR_HANDLE   g_srvFontGpuDescHandle            = {};
-UINT                          g_srvDescriptorSize               = 0;
-UINT                          g_srvHeapUsed                     = 0;
-ID3D12GraphicsCommandList*    g_guiCommandList                  = nullptr;
+ID3D12DescriptorHeap*         g_srvHeap                           = nullptr;
+D3D12_CPU_DESCRIPTOR_HANDLE   g_srvFontCpuDescHandle              = {};
+D3D12_GPU_DESCRIPTOR_HANDLE   g_srvFontGpuDescHandle              = {};
+UINT                          g_srvDescriptorSize                 = 0;
+UINT                          g_srvHeapUsed                       = 0;
+ID3D12CommandAllocator*       g_guiCommandAllocator[g_frameCount] = {};
+ID3D12GraphicsCommandList*    g_guiCommandList                    = nullptr;
 
-ID3D12Resource*               g_renderTargets[g_frameCount]     = {};
-ID3D12DescriptorHeap*         g_rtvHeap                         = nullptr;
-UINT                          g_rtvDescriptorSize               = 0;
-UINT                          g_rtvHeapUsed                     = 0;
-CD3DX12_CPU_DESCRIPTOR_HANDLE g_renderTargetViews[g_frameCount] = {};
+ID3D12GraphicsCommandList* textureUploadCommandList = nullptr;
 
-ID3D12Resource*               g_depthStencil[g_frameCount]      = {};
-ID3D12DescriptorHeap*         g_dsvHeap                         = nullptr;
-UINT                          g_dsvDescriptorSize               = 0;
-UINT                          g_dsvHeapUsed                     = 0;
-CD3DX12_CPU_DESCRIPTOR_HANDLE g_depthStencilViews[g_frameCount] = {};
 
-ID3D12Fence*                  g_fence                           = nullptr;
-UINT64                        g_fenceValues[g_frameCount]       = {};
-HANDLE                        g_fenceEvent                      = NULL;
+ID3D12Resource*               g_renderTargets[g_frameCount]       = {};
+ID3D12DescriptorHeap*         g_rtvHeap                           = nullptr;
+UINT                          g_rtvDescriptorSize                 = 0;
+UINT                          g_rtvHeapUsed                       = 0;
+CD3DX12_CPU_DESCRIPTOR_HANDLE g_renderTargetViews[g_frameCount]   = {};
 
-ID3D12Resource*               g_offscreenTexture                = nullptr;
-CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenShaderResourceView     = {};
-CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenRenderTargetView       = {};
-ID3D12Resource*               g_offscreenDepthTexture           = nullptr;
-CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenDepthStencilView       = {};
-const FLOAT                   g_offscreenColor[4]               = { 0.0f, 0.2f, 0.5f, 1.0f };
+ID3D12Resource*               g_depthStencil[g_frameCount]        = {};
+ID3D12DescriptorHeap*         g_dsvHeap                           = nullptr;
+UINT                          g_dsvDescriptorSize                 = 0;
+UINT                          g_dsvHeapUsed                       = 0;
+CD3DX12_CPU_DESCRIPTOR_HANDLE g_depthStencilViews[g_frameCount]   = {};
 
-const FLOAT                   g_backbufferColor[4]              = { 0.0f, 0.4f, 0.0f, 1.0f };
+ID3D12Fence*                  g_fence                             = nullptr;
+UINT64                        g_fenceValues[g_frameCount]         = {};
+HANDLE                        g_fenceEvent                        = NULL;
 
-ID3D12Resource*               g_vertexBuffer                    = nullptr;
-ID3D12Resource*               g_indexBuffer                     = nullptr;
-D3D12_VERTEX_BUFFER_VIEW      g_vertexBufferView                = {};
-D3D12_INDEX_BUFFER_VIEW       g_indexBufferView                 = {};
+ID3D12Resource*               g_offscreenTexture                  = nullptr;
+CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenShaderResourceView       = {};
+CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenRenderTargetView         = {};
+ID3D12Resource*               g_offscreenDepthTexture             = nullptr;
+CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenDepthStencilView         = {};
+const FLOAT                   g_offscreenColor[4]                 = { 0.0f, 0.2f, 0.5f, 1.0f };
 
-D3D12_INPUT_LAYOUT_DESC       g_inputLayoutDesc                 = {};
+const FLOAT                   g_backbufferColor[4]                = { 0.0f, 0.4f, 0.0f, 1.0f };
 
-ID3D12Resource*               g_constantBuffer[2]               = {};
-void*                         g_constantBufferDataBegin[2]      = {};
+ID3D12Resource*               g_vertexBuffer                      = nullptr;
+ID3D12Resource*               g_indexBuffer                       = nullptr;
+D3D12_VERTEX_BUFFER_VIEW      g_vertexBufferView                  = {};
+D3D12_INDEX_BUFFER_VIEW       g_indexBufferView                   = {};
 
-ID3D12GraphicsCommandList*    g_commandList                     = nullptr;
-ID3D12GraphicsCommandList*    g_commandList2                    = nullptr;
+D3D12_INPUT_LAYOUT_DESC       g_inputLayoutDesc                   = {};
 
-ID3D12RootSignature*          g_rootSignature                   = nullptr;
-ID3D12PipelineState*          g_pipelineState                   = nullptr;
-ID3DBlob*                     g_compiledVertexShaderBlob        = nullptr;
-ID3DBlob*                     g_compiledPixelShaderBlob         = nullptr;
+ID3D12Resource*               g_constantBuffer[2]                 = {};
+void*                         g_constantBufferDataBegin[2]        = {};
 
-/*
-ID3D11Texture2D*          g_imageTexture                = nullptr;
-ID3D11ShaderResourceView* g_imageShaderResourceView     = nullptr;*/
+ID3D12GraphicsCommandList*    g_commandList                       = nullptr;
+ID3D12GraphicsCommandList*    g_commandList2                      = nullptr;
+
+ID3D12RootSignature*          g_rootSignature                     = nullptr;
+ID3D12PipelineState*          g_pipelineState                     = nullptr;
+ID3DBlob*                     g_compiledVertexShaderBlob          = nullptr;
+ID3DBlob*                     g_compiledPixelShaderBlob           = nullptr;
+
+ID3D12Resource*               g_imageTexture                      = nullptr;
 
 struct CONSTANTBUFFER
 {
@@ -418,15 +419,6 @@ HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epi
     if (g_device == nullptr)
         return S_OK;
 
-    /*for (int i = 0; i < g_frameCount; i++)
-    {
-        if (g_backBuffer[i] != nullptr)
-        {
-            g_backBuffer[i]->Destroy();
-            g_backBuffer[i] = nullptr;
-        }
-    }*/
-
     for (int i = 0; i < g_frameCount; i++)
     {
         if (g_renderTargets[i] != nullptr)
@@ -452,10 +444,7 @@ HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epi
     // Resize swapchain.
     HRESULT hr = g_swapChain->ResizeBuffers(g_frameCount, width, height, g_swapChainFormat, 0);
     if (FAILED(hr))
-    {
-        //LogPrint(L"Error while resizing swapchain (%s).\n", GetHRESULTString(hr));
-        return hr;
-    }
+        OnError(L"Failed to resize swapchain.");
 
     // Create frame resources.
     {
@@ -496,10 +485,6 @@ HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epi
                     _uuidof(ID3D12Resource),
                     (void**)&g_depthStencil[n]);
 
-                wchar_t name[64] = {};
-                wprintf(name, L"g_depthStencil[%d]", n);
-                g_depthStencil[n]->SetName(name);
-
                 g_depthStencilViews[n] = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_dsvHeap->GetCPUDescriptorHandleForHeapStart());
                 g_depthStencilViews[n].Offset(g_dsvHeapUsed);//1, g_dsvHeapUsed);
 
@@ -514,74 +499,6 @@ HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epi
     if (g_demoMode == eDemoMode::Spinning3DCube)
         InitializeOffscreenFrameBuffer();
 
-#if 0
-    if (g_immediateContext == nullptr)
-        return S_OK;
-
-    if (g_depthStencilView != nullptr)
-    {
-        g_depthStencilView->Release();
-        g_depthStencilView = nullptr;
-    }
-
-    if (g_depthStencilTexture != nullptr)
-    {
-        g_depthStencilTexture->Release();
-        g_depthStencilTexture = nullptr;
-    }
-
-    if (g_renderTargetView != nullptr)
-    {
-        g_renderTargetView->Release();
-        g_renderTargetView = nullptr;
-    }
-
-    // Resize swapchain.
-    HRESULT hr = g_swapChain->ResizeBuffers(1, width/*g_windowWidth*/, height/*g_windowHeight*/, g_renderTargetViewFormat, 0);
-    if (FAILED(hr))
-    {
-        //LogPrint(L"Error while resizing swapchain (%s).\n", GetHRESULTString(hr));
-        return hr;
-    }
-        
-    // Get swapchain buffer.
-    ID3D11Texture2D* pBackBuffer = nullptr;
-    hr = g_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pBackBuffer));
-    if (FAILED(hr))
-    {
-        //LogPrint(L"Error while getting swapchain buffer (%s).\n", GetHRESULTString(hr));
-        return hr;
-    }
-
-    // Create a render target view.
-    hr = g_device->CreateRenderTargetView(pBackBuffer, nullptr, &g_renderTargetView);
-    pBackBuffer->Release();
-    if (FAILED(hr))
-    {
-        //LogPrint(L"Error while creating rendertarget view (%s).\n", GetHRESULTString(hr));
-        return hr;
-    }
-
-    D3D11_TEXTURE2D_DESC depthStencilDesc;
-    depthStencilDesc.Width              = width;
-    depthStencilDesc.Height             = height;
-    depthStencilDesc.MipLevels          = 1;
-    depthStencilDesc.ArraySize          = 1;
-    depthStencilDesc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depthStencilDesc.SampleDesc.Count   = 1;
-    depthStencilDesc.SampleDesc.Quality = 0;
-    depthStencilDesc.Usage              = D3D11_USAGE_DEFAULT;
-    depthStencilDesc.BindFlags          = D3D11_BIND_DEPTH_STENCIL;
-    depthStencilDesc.CPUAccessFlags     = 0; 
-    depthStencilDesc.MiscFlags          = 0;
-
-    //Create the Depth/Stencil View
-    g_device->CreateTexture2D(&depthStencilDesc, NULL, &g_depthStencilTexture);
-    g_device->CreateDepthStencilView(g_depthStencilTexture, NULL, &g_depthStencilView);
-
-    // Set render target and depth stencil.
-    g_immediateContext->OMSetRenderTargets(1, &g_renderTargetView, g_depthStencilView);
-#endif
     return S_OK;
 }
 
@@ -756,8 +673,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         hr = g_device->CreateCommandQueue(&queueDesc, _uuidof(ID3D12CommandQueue), (void**)&g_commandQueue);
         if (FAILED(hr))
             return hr;
-
-        g_commandQueue->SetName(L"g_commandQueue");
     }
 
     // Create the swap chain.
@@ -809,7 +724,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         hr = g_device->CreateDescriptorHeap(&srvHeapDesc, _uuidof(ID3D12DescriptorHeap), (void**)&g_srvHeap);
         g_srvDescriptorSize = g_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
     }
         
     for (int i=0; i<g_frameCount; i++)
@@ -818,9 +732,9 @@ HRESULT InitializeD3D12(HWND hWnd)
         if (FAILED(hr))
             OnError(L"Failed to create command allocator.");
 
-        wchar_t name[64] = {};
-        wprintf(name, L"g_commandAllocator[%d]", i);
-        g_commandAllocator[i]->SetName(name);
+        hr = g_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, _uuidof(ID3D12CommandAllocator), (void**)&g_guiCommandAllocator[i]);
+        if (FAILED(hr))
+            OnError(L"Failed to create command allocator.");
     }
 
     {
@@ -832,9 +746,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         if (FAILED(hr))
             OnError(L"Failed to close command list.");
 
-        g_commandList->SetName(L"g_commandList");
-
-
         hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_commandAllocator[g_frameIndex], NULL, _uuidof(ID3D12GraphicsCommandList), (void**)&g_commandList2);
         if (FAILED(hr))
             OnError(L"Failed to create command list.");
@@ -842,8 +753,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         hr = g_commandList2->Close();
         if (FAILED(hr))
             OnError(L"Failed to close command list.");
-
-        g_commandList2->SetName(L"g_commandList2");
     }
 
     {
@@ -852,13 +761,28 @@ HRESULT InitializeD3D12(HWND hWnd)
         g_srvFontGpuDescHandle = g_srvHeap->GetGPUDescriptorHandleForHeapStart();
 
         // Create command list.
-        hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_commandAllocator[g_frameIndex], nullptr, _uuidof(ID3D12GraphicsCommandList), (void**) &g_guiCommandList);
+        hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_guiCommandAllocator[g_frameIndex], nullptr, _uuidof(ID3D12GraphicsCommandList), (void**) &g_guiCommandList);
         if (FAILED(hr))
         {
             assert(false);
         }
 
         hr = g_guiCommandList->Close();
+        if (FAILED(hr))
+        {
+            assert(false);
+        }
+    }
+
+    {
+        // Create command list.
+        hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_commandAllocator[g_frameIndex], nullptr, _uuidof(ID3D12GraphicsCommandList), (void**)&textureUploadCommandList);
+        if (FAILED(hr))
+        {
+            assert(false);
+        }
+
+        hr = textureUploadCommandList->Close();
         if (FAILED(hr))
         {
             assert(false);
@@ -904,10 +828,6 @@ HRESULT InitializeD3D12(HWND hWnd)
                     _uuidof(ID3D12Resource),
                     (void**)&g_depthStencil[n]);
 
-                wchar_t name[64] = {};
-                wprintf(name, L"g_depthStencil[%d]", n);
-                g_depthStencil[n]->SetName(name);
-
                 g_depthStencilViews[n] = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_dsvHeap->GetCPUDescriptorHandleForHeapStart());
                 g_depthStencilViews[n].Offset(g_dsvHeapUsed);//1, g_dsvHeapUsed);
 
@@ -924,7 +844,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         if (FAILED(hr))
             return hr;
         g_fenceValues[g_frameIndex]++;
-
 
         // Create an event handle to use for frame synchronization.
         g_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -948,196 +867,6 @@ HRESULT InitializeD3D12(HWND hWnd)
 
     return S_OK;
 }
-#if 0
-{
-    HRESULT hr = S_OK;
-
-    // Get window size.
-    RECT rc;
-    GetClientRect(hWnd, &rc);
-    const UINT width  = rc.right  - rc.left;
-    const UINT height = rc.bottom - rc.top;
-
-    UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-    const D3D_DRIVER_TYPE driverTypes[] =
-    {
-        D3D_DRIVER_TYPE_HARDWARE,
-        D3D_DRIVER_TYPE_WARP,
-        D3D_DRIVER_TYPE_REFERENCE,
-    };
-
-    const int driverTypeCount = ARRAYSIZE(driverTypes);
-
-    const D3D_FEATURE_LEVEL featureLevels[] =
-    {
-        D3D_FEATURE_LEVEL_11_1,
-        D3D_FEATURE_LEVEL_11_0,
-        //D3D_FEATURE_LEVEL_10_1,
-        //D3D_FEATURE_LEVEL_10_0,
-    };
-
-    const int featureLevelCount = ARRAYSIZE(featureLevels);
-
-    for (int i = 0; i < driverTypeCount; i++)
-    {
-        g_driverType = driverTypes[i];
-
-        // Create device.
-        hr = D3D11CreateDevice
-        (
-            nullptr,
-            g_driverType,
-            nullptr,
-            createDeviceFlags,
-            featureLevels,
-            featureLevelCount,
-            D3D11_SDK_VERSION,
-            &g_device,
-            &g_featureLevel,
-            &g_immediateContext
-        );
-
-        // DirectX 11.0 platforms will not recognize D3D_FEATURE_LEVEL_11_1 so we need to retry without it
-        if (hr == E_INVALIDARG)
-        {
-            hr = D3D11CreateDevice
-            (
-                nullptr,
-                g_driverType,
-                nullptr,
-                createDeviceFlags,
-                &featureLevels[1],
-                featureLevelCount - 1,
-                D3D11_SDK_VERSION,
-                &g_device,
-                &g_featureLevel,
-                &g_immediateContext
-            );
-        }
-
-        if (SUCCEEDED(hr))
-            break;
-    }
-
-    if (FAILED(hr))
-    {
-        //LogPrint(L"Could not find a Direct3D11 device.\n");
-        return hr;
-    }
-
-    // Obtain DXGI factory from device (since we used nullptr for pAdapter above)
-    IDXGIFactory1* dxgiFactory = nullptr;
-    {
-        IDXGIDevice* dxgiDevice = nullptr;
-        hr = g_device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgiDevice));
-        if (SUCCEEDED(hr))
-        {
-            IDXGIAdapter* adapter = nullptr;
-            hr = dxgiDevice->GetAdapter(&adapter);
-            if (SUCCEEDED(hr))
-            {
-                hr = adapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&dxgiFactory));
-                //if (FAILED(hr))
-                    //LogPrint(L"Error while getting DXGIFactory from IDXGIAdapter (%s).\n", GetHRESULTString(hr));
-                adapter->Release();
-            }
-            else
-            {
-                //LogPrint(L"Error while getting IDXGIAdapter from IDXGIDevice (%s).\n", GetHRESULTString(hr));
-            }
-            dxgiDevice->Release();
-        }
-        else
-        {
-            //LogPrint(L"Error getting DXGIDevice from ID3D11Device (%s).\n", GetHRESULTString(hr));
-        }
-
-        if (FAILED(hr))
-            return hr;
-    }
-
-    // Create swap chain
-    {
-        IDXGIFactory2* dxgiFactory2 = nullptr;
-        hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&dxgiFactory2));
-        if (dxgiFactory2)
-        {
-            // DirectX 11.1 or later
-            hr = g_device->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(&g_device1));
-            if (SUCCEEDED(hr))
-            {
-                g_immediateContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&g_immediateContext1));
-            }
-            else
-            {
-                //LogPrint(L"Error getting ID3D11DeviceContext1 from ID3D11DeviceContext (%s).\n", GetHRESULTString(hr));
-            }
-
-            DXGI_SWAP_CHAIN_DESC1 sd = {};
-            sd.Width              = width;
-            sd.Height             = height;
-            sd.Format             = g_renderTargetViewFormat;
-            sd.SampleDesc.Count   = 1;
-            sd.SampleDesc.Quality = 0;
-            sd.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            sd.BufferCount        = 1;
-
-            hr = dxgiFactory2->CreateSwapChainForHwnd(g_device, hWnd, &sd, nullptr, nullptr, &g_swapChain1);
-            if (SUCCEEDED(hr))
-            {
-                hr = g_swapChain1->QueryInterface(__uuidof(IDXGISwapChain), reinterpret_cast<void**>(&g_swapChain));
-                //if (FAILED(hr))
-                    //LogPrint(L"Error getting IDXGISwapChain from IDXGISwapChain1 (%s).\n", GetHRESULTString(hr));
-            }
-            else
-            {
-                //LogPrint(L"Error creating IDXGISwapChain1 (%s).\n", GetHRESULTString(hr));
-            }
-
-            dxgiFactory2->Release();
-        }
-        else
-        {
-            // DirectX 11.0 systems
-            DXGI_SWAP_CHAIN_DESC sd = {};
-            sd.BufferCount                        = 1;
-            sd.BufferDesc.Width                   = width;
-            sd.BufferDesc.Height                  = height;
-            sd.BufferDesc.Format                  = g_renderTargetViewFormat;
-            sd.BufferDesc.RefreshRate.Numerator   = 60;
-            sd.BufferDesc.RefreshRate.Denominator = 1;
-            sd.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            sd.OutputWindow                       = hWnd;
-            sd.SampleDesc.Count                   = 1;
-            sd.SampleDesc.Quality                 = 0;
-            sd.Windowed                           = TRUE;
-
-            hr = dxgiFactory->CreateSwapChain(g_device, &sd, &g_swapChain);
-            //if (FAILED(hr))
-                //LogPrint(L"Error creating IDXGISwapChain (%s).\n", GetHRESULTString(hr));
-        }
-
-        // Note this tutorial doesn't handle full-screen swapchains so we block the ALT+ENTER shortcut
-        dxgiFactory->MakeWindowAssociation(hWnd, 0);// DXGI_MWA_NO_ALT_ENTER);
-
-        dxgiFactory->Release();
-
-        if (FAILED(hr))
-            return hr;
-    }
-
-    // Update render-target view.
-    hr = ResizeBuffers(width, height);//false, false, true);
-    if (FAILED(hr))
-        return hr;
-
-    return S_OK;
-}
-#endif
 
 void InitializeCNSDK(HWND hWnd)
 {
@@ -1155,7 +884,7 @@ void InitializeCNSDK(HWND hWnd)
     g_interlacer->InitializeD3D12(g_device, g_commandQueue, leia::sdk::eLeiaTaskResponsibility::SDK, leia::sdk::eLeiaTaskResponsibility::SDK, leia::sdk::eLeiaTaskResponsibility::SDK);
 
     // Initialize interlacer GUI.
-    /*leia::sdk::DebugMenuInitArgs debugMenuInitArgs;
+    leia::sdk::DebugMenuInitArgs debugMenuInitArgs;
     debugMenuInitArgs.gui.surface                   = hWnd;
     debugMenuInitArgs.gui.d3d12Device               = g_device;
     debugMenuInitArgs.gui.d3d12DeviceCbvSrvHeap     = g_srvHeap;
@@ -1165,7 +894,7 @@ void InitializeCNSDK(HWND hWnd)
     debugMenuInitArgs.gui.d3d12RtvFormat            = g_swapChainFormat;
     debugMenuInitArgs.gui.d3d12CommandList          = g_guiCommandList;
     debugMenuInitArgs.gui.graphicsAPI               = leia::sdk::GuiGraphicsAPI::D3D12;
-    g_interlacer->InitializeGui(debugMenuInitArgs);*/
+    g_interlacer->InitializeGui(debugMenuInitArgs);
 
     // Set stereo sliding mode.
     g_interlacer->SetInterlaceMode(leia::sdk::eLeiaInterlaceMode::StereoSliding);
@@ -1240,8 +969,6 @@ void LoadScene()
             if (FAILED(hr))
                 OnError(L"Failed to create vertex buffer.");
 
-            g_vertexBuffer->SetName(L"g_vertexBuffer");
-
             // Copy the triangle data to the vertex buffer.
             UINT8* pVertexDataBegin;
             CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
@@ -1292,8 +1019,6 @@ void LoadScene()
 
             if (FAILED(hr))
                 OnError(L"Failed to create index buffer.");
-
-            g_indexBuffer->SetName(L"g_indexBuffer");
 
             // Copy the triangle data to the index buffer.
             UINT8* pIndexDataBegin;
@@ -1412,8 +1137,6 @@ void LoadScene()
                 if (FAILED(hr))
                     OnError(L"Failed to create constant buffer.");
 
-                g_constantBuffer[i]->SetName(L"g_constantBuffer[i]");
-
                 // Map and initialize the constant buffer. We don't unmap this until the
                 // app closes. Keeping things mapped for the lifetime of the resource is okay.
                 CD3DX12_RANGE readRange(0, 0);
@@ -1427,22 +1150,9 @@ void LoadScene()
             rootCBVDescriptor.RegisterSpace  = 0;
             rootCBVDescriptor.ShaderRegister = 0;
 
-            //const int rootParameterCount = 1;// + samplerCount;
-
-            //D3D12_DESCRIPTOR_RANGE*      pDescriptorTableRanges = new D3D12_DESCRIPTOR_RANGE[samplerCount];
-            //D3D12_ROOT_DESCRIPTOR_TABLE* pDescriptorTables      = new D3D12_ROOT_DESCRIPTOR_TABLE[samplerCount];
-            //D3D12_STATIC_SAMPLER_DESC*   pSamplers              = new D3D12_STATIC_SAMPLER_DESC[samplerCount];
-            //D3D12_ROOT_PARAMETER*        pRootParameters        = new D3D12_ROOT_PARAMETER[rootParameterCount];
-
             D3D12_ROOT_PARAMETER rootParameters = {};
-
-            //memset(pDescriptorTableRanges, 0, samplerCount * sizeof(*pDescriptorTableRanges));
-            //memset(pDescriptorTables,      0, samplerCount * sizeof(*pDescriptorTables));
-            //memset(pSamplers,              0, samplerCount * sizeof(*pSamplers));
-            //memset(pRootParameters,        0, rootParameterCount * sizeof(*pRootParameters));
-
-            rootParameters.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_CBV; // this is a descriptor table
-            rootParameters.Descriptor       = rootCBVDescriptor; // this is our descriptor table for this root parameter
+            rootParameters.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_CBV;
+            rootParameters.Descriptor       = rootCBVDescriptor;
             rootParameters.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
             const D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -1459,11 +1169,6 @@ void LoadScene()
             ID3DBlob* signature = nullptr;
             HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &pErrorBlob);
 
-            //delete[] pSamplers;
-            //delete[] pRootParameters;
-            //delete[] pDescriptorTables;
-            //delete[] pDescriptorTableRanges;
-
             if (FAILED(hr))
             {
                 char msg[2048] = {};
@@ -1475,22 +1180,8 @@ void LoadScene()
             hr = g_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&g_rootSignature));
             if (FAILED(hr))
                 OnError(L"Failed to create root signature.");
-
-            g_rootSignature->SetName(L"g_rootSignature");
         }
-        /*
-        // Create vertex input layout.
-        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-        };
 
-        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
-        inputLayoutDesc.NumElements        = _countof(inputElementDescs);
-        inputLayoutDesc.pInputElementDescs = inputElementDescs;
-        */
         // Create pipeline state object.
         {
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -1499,34 +1190,26 @@ void LoadScene()
             psoDesc.VS                              = CD3DX12_SHADER_BYTECODE(g_compiledVertexShaderBlob);
             psoDesc.PS                              = CD3DX12_SHADER_BYTECODE(g_compiledPixelShaderBlob);
             psoDesc.RasterizerState                 = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-            psoDesc.BlendState                      = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-                     
-            psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-            //if (!hasDSV)
-              //  psoDesc.DepthStencilState.DepthEnable = FALSE;
-
-            psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-
+            psoDesc.BlendState                      = CD3DX12_BLEND_DESC(D3D12_DEFAULT);                    
+            psoDesc.DepthStencilState               = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+            psoDesc.RasterizerState.CullMode        = D3D12_CULL_MODE_NONE;
             psoDesc.SampleDesc.Count                = 1;
             psoDesc.SampleDesc.Quality              = 0;
             psoDesc.SampleMask                      = UINT_MAX;
             psoDesc.PrimitiveTopologyType           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             psoDesc.NumRenderTargets                = 1;
             psoDesc.RTVFormats[0]                   = DXGI_FORMAT_R8G8B8A8_UNORM;
-            psoDesc.DSVFormat                       = DXGI_FORMAT_D32_FLOAT;//24_UNORM_S8_UINT;
+            psoDesc.DSVFormat                       = DXGI_FORMAT_D32_FLOAT;
             psoDesc.SampleDesc.Count                = 1;
 
             HRESULT hr = g_device->CreateGraphicsPipelineState(&psoDesc, _uuidof(ID3D12PipelineState), (void**)&g_pipelineState);
             if (FAILED(hr))
                 OnError(L"Failed to create pipeline state.");
-
-            g_pipelineState->SetName(L"g_pipelineState");
         }
 
     }
     else if (g_demoMode == eDemoMode::StereoImage)
     {
-#if 0
         // Load stereo image.
         int width = 0;
         int height = 0;
@@ -1555,44 +1238,132 @@ void LoadScene()
             }
         }
 
-        D3D11_SUBRESOURCE_DATA initData = {};
-        initData.pSysMem          = convertedInitialData;
-        initData.SysMemPitch      = width * 4;
-        initData.SysMemSlicePitch = height * initData.SysMemPitch;
+        // Describe and create a Texture2D.
+        D3D12_RESOURCE_DESC textureDesc = {};
+        textureDesc.MipLevels          = 1;
+        textureDesc.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
+        textureDesc.Width              = width;
+        textureDesc.Height             = height;
+        textureDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize   = 1;
+        textureDesc.SampleDesc.Count   = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-        // Create texture.
-        D3D11_TEXTURE2D_DESC textureDesc = {};
-        textureDesc.Width            = width;
-        textureDesc.Height           = height;
-        textureDesc.Format           = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.MipLevels        = 1;
-        textureDesc.ArraySize        = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.Usage            = D3D11_USAGE_DEFAULT;
-        textureDesc.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
-        HRESULT hr = g_device->CreateTexture2D(&textureDesc, &initData, &g_imageTexture);
+        CD3DX12_HEAP_PROPERTIES heapPropertiesDefault(D3D12_HEAP_TYPE_DEFAULT);
+
+        HRESULT hr = g_device->CreateCommittedResource(
+            &heapPropertiesDefault,
+            D3D12_HEAP_FLAG_NONE,
+            &textureDesc,
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            nullptr,
+            _uuidof(ID3D12Resource),
+            (void**) &g_imageTexture);
+
         if (FAILED(hr))
+            OnError(L"Failed to create image texture.");
+
         {
-            OnError(L"Failed to create stereo image texture");
-            return;
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(g_imageTexture, 0, 1);
+
+            // Note: ComPtr's are CPU objects but this resource needs to stay in scope until
+            // the command list that references it has finished executing on the GPU.
+            // We will flush the GPU at the end of this method to ensure the resource is not
+            // prematurely destroyed.
+            ID3D12Resource* textureUploadHeap = nullptr;
+            
+            CD3DX12_HEAP_PROPERTIES heapPropertiesUpload(D3D12_HEAP_TYPE_UPLOAD);
+
+            CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+
+            // Create the GPU upload buffer.
+            hr = g_device->CreateCommittedResource(
+                &heapPropertiesUpload,
+                D3D12_HEAP_FLAG_NONE,
+                &resourceDesc,
+                D3D12_RESOURCE_STATE_GENERIC_READ,
+                nullptr,
+                _uuidof(ID3D12Resource),
+                (void**)&textureUploadHeap);
+
+            if (FAILED(hr))
+                OnError(L"Failed to create texture upload buffer");
+
+            // Prepare command-list.
+            {
+                // Reset list.
+                hr = textureUploadCommandList->Reset(g_commandAllocator[g_frameIndex], NULL);
+                if (FAILED(hr))
+                    OnError(L"Failed to reset texture upload command-list");
+            }
+
+            // Fill command-list.
+            {
+                D3D12_SUBRESOURCE_DATA textureData = {};
+                textureData.pData      = convertedInitialData;
+                textureData.RowPitch   = width * 4;
+                textureData.SlicePitch = height * textureData.RowPitch;
+
+                UpdateSubresources(textureUploadCommandList, g_imageTexture, textureUploadHeap, 0, 0, 1, &textureData);
+
+                //TransitionShaderResource(textureUploadCommandList);
+
+                TransitionResourceState(textureUploadCommandList, g_imageTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+            }
+
+            // Close command-list.
+            HRESULT hr = textureUploadCommandList->Close();
+            if (FAILED(hr))
+                OnError(L"Failed to close texture upload command-list");
+
+            // Execute command list.
+            ID3D12CommandList* ppCommandLists[] = { textureUploadCommandList };
+            g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
         }
+        /*
+        // Create shader resource view.
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Format                        = textureDesc.Format;
+            srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MostDetailedMip     = 0;
+            srvDesc.Texture2D.MipLevels           = 1;
+            srvDesc.Texture2D.PlaneSlice          = 0;
+            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-        D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-        SRVDesc.Format                    = textureDesc.Format;
-        SRVDesc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
-        SRVDesc.Texture2D.MostDetailedMip = 0;
-        SRVDesc.Texture2D.MipLevels       = 1;
+            g_imageShaderResourceView = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_srvHeap->GetCPUDescriptorHandleForHeapStart());
+            g_imageShaderResourceView.Offset(g_srvHeapUsed);
+            g_device->CreateShaderResourceView(g_imageTexture, &srvDesc, g_imageShaderResourceView);
+            g_srvHeapUsed += g_srvDescriptorSize;
+        }*/
+    }
 
-        hr = g_device->CreateShaderResourceView(g_imageTexture, &SRVDesc, &g_imageShaderResourceView);
+    // Wait for loading to complete.
+    {
+        // Create fence.
+        ID3D12Fence* loadSceneFence = nullptr;
+        HRESULT hr = g_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, _uuidof(ID3D12Fence), (void**)&loadSceneFence);
         if (FAILED(hr))
-        {
-            OnError(L"Failed to create stereo image shader resource view");
-            return;
-        }
-#endif
+            OnError(L"Failed to create load scene fence");
 
+        // Create an event handle to use for frame synchronization.
+        HANDLE loadSceneFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (loadSceneFenceEvent == nullptr)
+            OnError(L"Failed to create load scene fence event");
+
+        // Signal wait for fence event.
+        g_commandQueue->Signal(loadSceneFence, 1);
+        loadSceneFence->SetEventOnCompletion(1, loadSceneFenceEvent);
+        WaitForSingleObject(loadSceneFenceEvent, INFINITE);
+
+        // Release.
+        loadSceneFence->Release();
+        CloseHandle(loadSceneFenceEvent);
     }
 }
+
 
 void InitializeOffscreenFrameBuffer()
 {
@@ -1654,8 +1425,6 @@ void InitializeOffscreenFrameBuffer()
         
         if (FAILED(hr))
             OnError(L"Failed to create offscreen frame buffer texture.");
-
-        g_offscreenTexture->SetName(L"g_offscreenTexture");
     }
 
     // Create shader view.
@@ -1709,15 +1478,13 @@ void InitializeOffscreenFrameBuffer()
             &heapPropertiesDefault,
             D3D12_HEAP_FLAG_NONE,
             &textureDesc,
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,// D3D12_RESOURCE_STATE_COMMON,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
             &optimizedClearValue,
             _uuidof(ID3D12Resource),
             (void**)&g_offscreenDepthTexture);
 
         if (FAILED(hr))
             OnError(L"Failed to create depth texture");
-
-        g_offscreenDepthTexture->SetName(L"g_offscreenDepthTexture");
     }
 
     // Create depth-stencil view.
@@ -1753,32 +1520,46 @@ void Render(float elapsedTime)
     const int   viewHeight  = g_sdk->GetViewHeight();
     const float aspectRatio = (float)viewWidth / (float)viewHeight;
 
-    //
+    // Reset allocators.
     g_commandAllocator[g_frameIndex]->Reset();
+    g_guiCommandAllocator[g_frameIndex]->Reset();
 
-    //
+    // Reset command-list.
     g_commandList->Reset(g_commandAllocator[g_frameIndex], g_pipelineState);
     g_commandList->SetGraphicsRootSignature(g_rootSignature);
-    //g_commandList->SetGraphicsRootConstantBufferView(0, g_constantBuffer->GetGPUVirtualAddress());
 
-    // set constant buffer descriptor heap
-    //ID3D12DescriptorHeap* descriptorHeaps[] = { rendererD3D12->srvHeap };
-    //commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-    // set the root descriptor table 0 to the constant buffer descriptor heap
+    // Prepare GUI command-list.
+    {
+        // Reset the list.
+        g_guiCommandList->Reset(g_guiCommandAllocator[g_frameIndex], nullptr);
+
+        // set constant buffer descriptor heap
+        ID3D12DescriptorHeap* descriptorHeaps[] = { g_srvHeap };
+        g_guiCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+        
+        // Transition to render-target.
+        TransitionResourceState(g_guiCommandList, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        
+        // set render-target for GUI (required by imGui)
+        g_guiCommandList->OMSetRenderTargets(1, &g_renderTargetViews[g_frameIndex], FALSE, nullptr);
+    }
+
+    // Transition swapchain render-target (final output) from common/present to render-target.
+    TransitionResourceState(g_commandList, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
     if (g_demoMode == eDemoMode::StereoImage)
     {
-        assert(false);
-    /*
-        // Clear backbuffer to green.
-        const FLOAT color[4] = {0.0f, 0.4f, 0.0f, 1.0f};
-        g_immediateContext->ClearRenderTargetView(g_renderTargetView, color);
-        g_immediateContext->ClearDepthStencilView(g_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        // Clear back-buffer to green.
+        g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], g_backbufferColor, 0, NULL);
+        g_commandList->Close();
+
+        // Execute the command list.
+        ID3D12CommandList* ppCommandLists[] = { g_commandList };
+        g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
         // Perform interlacing.
         g_interlacer->SetSourceViewsSize(viewWidth, viewHeight, true);
-        g_interlacer->DoPostProcessPicture(g_windowWidth, g_windowHeight, g_imageShaderResourceView, g_renderTargetView);
-        */
+        g_interlacer->DoPostProcessPicture(g_windowWidth, g_windowHeight, g_imageTexture, g_renderTargets[g_frameIndex]);
     }
     else if (g_demoMode == eDemoMode::Spinning3DCube)
     {
@@ -1795,12 +1576,11 @@ void Render(float elapsedTime)
             geometryTransform.create(geometryOrientation, geometryPos);
         }
 
-        TransitionResourceState(g_commandList, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
         // Clear back-buffer to green.
         g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], g_backbufferColor, 0, NULL);
         g_commandList->ClearDepthStencilView(g_depthStencilViews[g_frameIndex], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
 
+        // Transition offscreen render-target (intermediate stereo texture with views) from shader-input to render-target.
         TransitionResourceState(g_commandList, g_offscreenTexture, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
         // Clear offscreen render-target to blue
@@ -1886,8 +1666,7 @@ void Render(float elapsedTime)
         scissorRect.bottom = g_windowHeight;
         g_commandList->RSSetScissorRects(1, &scissorRect);
 
-        TransitionResourceState(g_commandList, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);//D3D12_RESOURCE_STATE_PRESENT);
-
+        // Transition offscreen texture to a shader input.
         TransitionResourceState(g_commandList, g_offscreenTexture, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
 
         g_commandList->Close();
@@ -1898,21 +1677,32 @@ void Render(float elapsedTime)
 
         // Perform interlacing.
         g_interlacer->SetSourceViewsSize(viewWidth, viewHeight, true);
-        g_interlacer->SetInterlaceViewTextureAtlas(g_offscreenTexture);// g_offscreenShaderResourceView);
-        g_interlacer->DoPostProcess(g_windowWidth, g_windowHeight, false, g_renderTargets[g_frameIndex]);// g_renderTargetView);
+        g_interlacer->SetInterlaceViewTextureAtlas(g_offscreenTexture);
+        g_interlacer->DoPostProcess(g_windowWidth, g_windowHeight, false, g_renderTargets[g_frameIndex]);
+    }
 
-        //
-        {
-            g_commandList2->Reset(g_commandAllocator[g_frameIndex], nullptr);//g_pipelineState);
-            //g_commandList->SetGraphicsRootSignature(g_rootSignature);
-            //g_commandList->SetGraphicsRootConstantBufferView(0, g_constantBuffer->GetGPUVirtualAddress());
-            TransitionResourceState(g_commandList2, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-            g_commandList2->Close();
+    // Transition render-target to be presentable.
+    {
+        // Record command-list to transition.
+        g_commandList2->Reset(g_commandAllocator[g_frameIndex], nullptr);
+        TransitionResourceState(g_commandList2, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+        g_commandList2->Close();
 
-            // Execute the command list.
-            ID3D12CommandList* ppCommandLists[] = { g_commandList2 };
-            g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-        }
+        // Execute the command list.
+        ID3D12CommandList* ppCommandLists[] = { g_commandList2 };
+        g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+    }
+
+    // Render GUI.
+    {
+        TransitionResourceState(g_guiCommandList, g_renderTargets[g_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+        // Close gui commandlist.
+        g_guiCommandList->Close();
+
+        // Execute the command list.
+        ID3D12CommandList* ppCommandLists[] = { g_guiCommandList };
+        g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
     }
 
     g_swapChain->Present(0, 0);
@@ -2085,30 +1875,37 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     // Cleanup.
     g_sdk->Destroy();
     
-    #if 0
-    SAFE_RELEASE(g_imageShaderResourceView);
+    CloseHandle(g_fenceEvent);
+
+    for (int i = 0; i < g_frameCount; i++)
+    {
+        SAFE_RELEASE(g_constantBuffer[i]);
+        SAFE_RELEASE(g_depthStencil[i]);
+        SAFE_RELEASE(g_renderTargets[i]);
+        SAFE_RELEASE(g_guiCommandAllocator[i]);
+        SAFE_RELEASE(g_commandAllocator[i]);
+    }
+
     SAFE_RELEASE(g_imageTexture);
-    SAFE_RELEASE(g_pixelShader);
-    SAFE_RELEASE(g_inputLayout);
-    SAFE_RELEASE(g_vertexShader);
-    SAFE_RELEASE(g_shaderConstantBuffer);
+    SAFE_RELEASE(g_compiledPixelShaderBlob);
+    SAFE_RELEASE(g_compiledVertexShaderBlob);
+    SAFE_RELEASE(g_pipelineState);
+    SAFE_RELEASE(g_rootSignature);
+    SAFE_RELEASE(g_commandList2);
+    SAFE_RELEASE(g_commandList);    
     SAFE_RELEASE(g_indexBuffer);
     SAFE_RELEASE(g_vertexBuffer);
-    SAFE_RELEASE(g_offscreenDepthStencilView);
     SAFE_RELEASE(g_offscreenDepthTexture);
-    SAFE_RELEASE(g_offscreenRenderTargetView);
-    SAFE_RELEASE(g_offscreenShaderResourceView);
     SAFE_RELEASE(g_offscreenTexture);
-    SAFE_RELEASE(g_depthStencilView);
-    SAFE_RELEASE(g_depthStencilTexture);
-    SAFE_RELEASE(g_renderTargetView);
-    SAFE_RELEASE(g_swapChain1);
-    SAFE_RELEASE(g_swapChain);
-    SAFE_RELEASE(g_immediateContext1);
-    SAFE_RELEASE(g_immediateContext);
-    SAFE_RELEASE(g_device1);
+    SAFE_RELEASE(g_fence);
+    SAFE_RELEASE(g_dsvHeap);    
+    SAFE_RELEASE(g_rtvHeap);    
+    SAFE_RELEASE(textureUploadCommandList);
+    SAFE_RELEASE(g_guiCommandList);    
+    SAFE_RELEASE(g_srvHeap);
+    SAFE_RELEASE(g_swapChain);    
+    SAFE_RELEASE(g_commandQueue);
     SAFE_RELEASE(g_device);
-    #endif
 
     return 0;
 }
