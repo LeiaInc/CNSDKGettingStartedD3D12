@@ -1202,7 +1202,7 @@ void LoadScene()
             psoDesc.RasterizerState                 = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
             psoDesc.BlendState                      = CD3DX12_BLEND_DESC(D3D12_DEFAULT);                    
             psoDesc.DepthStencilState               = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-            psoDesc.RasterizerState.CullMode        = D3D12_CULL_MODE_NONE;
+            psoDesc.RasterizerState.CullMode        = D3D12_CULL_MODE_BACK;
             psoDesc.SampleDesc.Count                = 1;
             psoDesc.SampleDesc.Quality              = 0;
             psoDesc.SampleMask                      = UINT_MAX;
@@ -1610,7 +1610,7 @@ void Render(float elapsedTime)
 
             // Get camera transform.
             mat4f cameraTransform;
-            cameraTransform.lookAt(camPos, camPos + camDir, vec3f(0.0f, 0.0f, 1.0f));
+            cameraTransform.lookAt(viewPos, viewPos + camDir, camUp);
 
             // Compute combined matrix.
             const mat4f mvp = cameraProjection * cameraTransform * geometryTransform;
@@ -1728,7 +1728,7 @@ void UpdateWindowTitle(HWND hWnd, double curTime)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     // Allow CNSDK debug menu to see window messages
-    if (g_interlacer != nullptr)
+    if ((g_interlacer != nullptr) && g_showGUI)
     {
         auto io = g_interlacer->ProcessGuiInput(hWnd, message, wParam, lParam);
         if (io.wantCaptureInput)
