@@ -49,6 +49,7 @@ float                           g_geometryDist                 = 500;
 bool                            g_perspective                  = true;
 float                           g_perspectiveCameraFiledOfView = 90.0f * 3.14159f / 180.0f;
 float                           g_orthographicCameraHeight     = 500.0f;
+bool                            g_showGUI                      = true;
 
 // Global D3D12 Variables.
 const int                     g_frameCount                        = 2;
@@ -846,11 +847,6 @@ HRESULT InitializeD3D12(HWND hWnd)
         WaitForGpu();
     }
 
-    // Update render-target view.
-    //hr = ResizeBuffersD3D12(renderer, width, height);
-    //if (FAILED(hr))
-      //  return hr;
-
     return S_OK;
 }
 
@@ -870,26 +866,26 @@ void InitializeCNSDK(HWND hWnd)
     g_interlacer->InitializeD3D12(g_device, g_commandQueue, leia::sdk::eLeiaTaskResponsibility::SDK, leia::sdk::eLeiaTaskResponsibility::SDK, leia::sdk::eLeiaTaskResponsibility::SDK);
 
     // Initialize interlacer GUI.
-    leia::sdk::DebugMenuInitArgs debugMenuInitArgs;
-    debugMenuInitArgs.gui.surface                   = hWnd;
-    debugMenuInitArgs.gui.d3d12Device               = g_device;
-    debugMenuInitArgs.gui.d3d12DeviceCbvSrvHeap     = g_srvHeap;
-    debugMenuInitArgs.gui.d3d12FontSrvCpuDescHandle = *((uint64_t*)&g_srvFontCpuDescHandle);
-    debugMenuInitArgs.gui.d3d12FontSrvGpuDescHandle = *((uint64_t*)&g_srvFontGpuDescHandle);
-    debugMenuInitArgs.gui.d3d12NumFramesInFlight    = g_frameCount;
-    debugMenuInitArgs.gui.d3d12RtvFormat            = g_swapChainFormat;
-    debugMenuInitArgs.gui.d3d12CommandList          = g_guiCommandList;
-    debugMenuInitArgs.gui.graphicsAPI               = leia::sdk::GuiGraphicsAPI::D3D12;
-    g_interlacer->InitializeGui(debugMenuInitArgs);
+    if (g_showGUI)
+    {
+        leia::sdk::DebugMenuInitArgs debugMenuInitArgs;
+        debugMenuInitArgs.gui.surface                   = hWnd;
+        debugMenuInitArgs.gui.d3d12Device               = g_device;
+        debugMenuInitArgs.gui.d3d12DeviceCbvSrvHeap     = g_srvHeap;
+        debugMenuInitArgs.gui.d3d12FontSrvCpuDescHandle = *((uint64_t*)&g_srvFontCpuDescHandle);
+        debugMenuInitArgs.gui.d3d12FontSrvGpuDescHandle = *((uint64_t*)&g_srvFontGpuDescHandle);
+        debugMenuInitArgs.gui.d3d12NumFramesInFlight    = g_frameCount;
+        debugMenuInitArgs.gui.d3d12RtvFormat            = g_swapChainFormat;
+        debugMenuInitArgs.gui.d3d12CommandList          = g_guiCommandList;
+        debugMenuInitArgs.gui.graphicsAPI               = leia::sdk::GuiGraphicsAPI::D3D12;
+        g_interlacer->InitializeGui(debugMenuInitArgs);
+    }
 
     // Set stereo sliding mode.
     g_interlacer->SetInterlaceMode(leia::sdk::eLeiaInterlaceMode::StereoSliding);
     const int numViews = g_interlacer->GetNumViews();
     if (numViews != 2)
         OnError(L"Unexpected number of views");
-
-    // Have to init this after a glContext is created but before we make any calls to OpenGL
-    g_interlacer->InitOnDesiredThread();
 }
 
 void LoadScene()
