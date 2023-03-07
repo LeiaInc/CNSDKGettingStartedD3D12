@@ -53,17 +53,29 @@ struct Config
     float facePredictLatencyMs   = 40.0f;
     float accelerationThreshold  = 0.6f;
 
+    bool faceTrackingSingleFaceEnable = false;
+    float faceTrackingSingleFaceTooFarDistanceThreshold = 0.8f;
+    int faceTrackingSingleFaceTooFarResetTimeoutMs = 1000;
+    int faceTrackingMaxNumOfFaces = 0;
 
+    float faceTrackingHeadPoseZLowPassAlpha = 0.2f;
 
 	void debugLog();
 };
 
+using CompletionCallback = std::function<void(bool success)>;
+
 LEIADEVICE_API
 bool Connect(Platform*);
-LEIADEVICE_API
-void SetBacklightMode(Platform*, bool enableLightfield);
 
-using CompletionCallback = std::function<void(bool success)>;
+LEIADEVICE_API
+bool InitBacklightController(CompletionCallback);
+LEIADEVICE_API
+void ShutdownBacklightController();
+LEIADEVICE_API
+void SetBacklightMode(bool enableLightfield);
+LEIADEVICE_API
+bool GetBacklightMode();
 
 /// Start potentially asynchronous request to get the display config.
 /// CompletionCallback might be called from a background thread thus it should be thread-safe.

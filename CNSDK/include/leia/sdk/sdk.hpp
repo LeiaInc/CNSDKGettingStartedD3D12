@@ -2,14 +2,17 @@
 
 #include "leia/sdk/helpers.hpp"
 
-namespace leia::device { struct Config; }
+namespace leia {
 
-namespace leia::sdk {
+namespace device { struct Config; }
+
+namespace sdk {
 
 enum class GraphicsAPI {
     OpenGL,
     D3D11,
-    D3D12
+    D3D12,
+    Vulkan
 };
 
 struct Delegate;
@@ -25,9 +28,7 @@ class ILeiaSDK
 public:
     virtual void        Destroy                () = 0;
 	virtual void        EnableSharpening       (bool enable) = 0;
-	virtual float       GetBaselineScaling     () const = 0;
 	virtual float       GetCenterView          () const = 0;
-	virtual float       GetConvergenceDistance () const = 0;
 	virtual int         GetDisplayWidth        () const = 0;
 	virtual int         GetDisplayHeight       () const = 0;
 	virtual int         GetMaxViews            () const = 0;
@@ -36,7 +37,6 @@ public:
 	virtual int         GetViewWidth           () const = 0;
 	virtual bool		GetUseBilinearFiltering() const = 0;
 	virtual bool        IsSharpeningEnabled    () const = 0;
-	virtual void        SetBaselineScaling     (float baseline) = 0;
 	virtual void        SetCenterView          (float centerView) = 0;
 	virtual void        Shutdown               () = 0;
 	virtual void        Tick                   (float deltaTime) = 0;
@@ -48,7 +48,8 @@ public:
 	virtual void        OnResume               () = 0;
 	virtual void        OnPause                () = 0;
 
-	virtual void        SetBacklight(bool enable) = 0;
+	virtual void        SetBacklight           (bool enable) = 0;
+	virtual bool        GetBacklight           () = 0;
 
 	virtual void        SetProfiling(bool enable) = 0;
 
@@ -64,11 +65,8 @@ public:
 	virtual void StartFaceTracking(bool start) = 0;
 	virtual bool IsFaceTrackingStarted() const = 0;
 	// Do not call on the main thread to avoid stalls.
-	virtual void SetFaceTrackingBackend(FaceDetectorBackend) = 0;
-	virtual FaceDetectorBackend GetFaceTrackingBackend() const = 0;
-	// Do not call on the main thread to avoid stalls.
-	virtual void SetFaceTrackingInputType(FaceDetectorInputType) = 0;
-	virtual FaceDetectorInputType GetFaceTrackingInputType() const = 0;
+	virtual FaceDetectorConfig GetFaceTrackingConfig() const = 0;
+	virtual void SetFaceTrackingConfig(FaceDetectorConfig) = 0;
 	virtual bool IsFaceTrackingOnGpu() const = 0;
 	virtual bool GetPrimaryFace(glm::vec3* position) const = 0;
 	virtual bool GetNonPredictedPrimaryFace(glm::vec3* position) const = 0;
@@ -78,7 +76,7 @@ public:
 
 	virtual void InitializePlatform(PlatformInitArgs const&) = 0;
 	virtual void Initialize(Delegate*) = 0;
-	virtual bool IsInitialized() = 0;
+	virtual bool IsInitialized() const = 0;
 
 	virtual AssetManager* GetAssetManager() = 0;
 
@@ -87,6 +85,7 @@ public:
 	virtual void Destroy(IThreadedInterlacer*) = 0;
 
     virtual ML* GetML() = 0;
+	virtual ~ILeiaSDK() {};
 };
 
 // Single entry point for creating Leia SDK interface.
@@ -96,4 +95,5 @@ ILeiaSDK* CreateLeiaSDK();
 LEIASDK_API
 bool IsFaceTrackingInService();
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

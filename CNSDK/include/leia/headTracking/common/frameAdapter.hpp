@@ -9,7 +9,8 @@
 #include <mutex>
 #include <functional>
 
-namespace leia::head {
+namespace leia {
+namespace head {
 
 // TODO: provide only the requested content
 enum FrameContent {
@@ -114,4 +115,5 @@ std::unique_ptr<WrappedFrame> WrapFrame(Frame const& frame);
 LHT_COMMON_API
 std::unique_ptr<WrappedFrame> WrapFrame(BufferedFrame&& bufferedFrame);
 
-} // namespace leia::head
+} // namespace head
+} // namespace leia

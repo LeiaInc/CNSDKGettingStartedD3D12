@@ -2,12 +2,21 @@
 #if USE_HLSL == 1
 
 #define uniform /**/
+#define gv(x) x
 
 #define InTex input.Tex
 #define OutTexCoord output.Tex
 #define OutPos output.Pos
 
 #else
+
+#if USE_GLSL_VULKAN
+#define gv(x) ubo.x
+#define LAYOUTLOC(x) layout(location = x)
+#else
+#define gv(x) x
+#define LAYOUTLOC(x) /**/
+#endif
 
 #define float2 vec2
 #define float3 vec3
@@ -41,14 +50,17 @@ struct PSInput
 
 #else
 
-layout (location = 0) in vec2 aTexCoord;
-out vec2 TexCoord;
+LAYOUTLOC(0) in vec2 aTexCoord;
+LAYOUTLOC(0) out vec2 TexCoord;
 
 #endif
 
 // Global variables (uniforms for GLSL and constant buffer for HLSL)
 #if USE_HLSL == 1
 cbuffer LeiaSharpenShaderConstantBufferData : register(b0)
+{
+#elif USE_GLSL_VULKAN == 1
+layout(binding = 0) uniform UniformBufferObject
 {
 #endif
 
@@ -65,6 +77,8 @@ cbuffer LeiaSharpenShaderConstantBufferData : register(b0)
 
 #if USE_HLSL == 1
 };
+#elif USE_GLSL_VULKAN == 1
+} ubo;
 #endif
 
 #if USE_HLSL == 1
@@ -78,7 +92,7 @@ void main()
 #endif
 
     // Scale and offset rect coordinates.
-    OutTexCoord = mul(rectTransform, float4(InTex, 0.0, 1.0)).xy;
+    OutTexCoord = mul(gv(rectTransform), float4(InTex, 0.0, 1.0)).xy;
 
     // Scale and offset position.
     OutPos = float4((OutTexCoord * 2.0) - 1.0, 0.0, 1.0);

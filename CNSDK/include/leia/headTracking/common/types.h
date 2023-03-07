@@ -62,6 +62,7 @@ typedef struct leia_headtracking_detected_face_t {
     leia_vector3 posePosition;
     // Head rotation in radians. The rotation is a left handed coordinate system.
     leia_vector3 poseAngle;
+    uint32_t id;
 } leia_headtracking_detected_face;
 
 #define LEIA_HEADTRACKING_MAX_NUM_FACES 3

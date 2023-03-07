@@ -7,7 +7,8 @@
 
 #include <cstdint>
 
-namespace leia::head {
+namespace leia {
+namespace head {
 
 using Point = glm::vec3;
 
@@ -56,6 +57,8 @@ struct DetectedFace {
     glm::vec3 posePosition;
     // Head rotation in radians. The rotation is a left handed coordinate system.
     glm::vec3 poseAngle;
+
+    FaceIdx id;
 };
 
 struct Imu {
@@ -63,10 +66,33 @@ struct Imu {
 };
 
 struct TrackingStateListener {
-    // Called right before the first frame arrives
-    virtual void OnTrackingStarted() = 0;
-    // Called after the last frame arrives
-    virtual void OnTrackingStopped() = 0;
+    // isStarted=true: called right before the first frame arrives.
+    // isStarted=false: called after the last frame arrives.
+    virtual void OnTrackingStatusUpdate(bool isStarted) = 0;
+};
+
+struct FaceTrackingStatus {
+    bool isStarted;
+};
+struct FaceTrackingProfilingStatus {
+    bool isEnabled;
+};
+struct FaceDetectorMaxNumOfFaces {
+    int value;
+};
+
+// Single-face mode forces tracking of a single face.
+// This allows the face detector to disable the detection stage,
+// and do only the tracking stage. It improves overall face tracking performance.
+//
+// Additionally, this mode automatically switches between available faces,
+// if the currently tracked one stays too far for some period of time.
+//
+struct SingleFaceConfiguration {
+    bool enable = false;
+    float tooFarDistanceThreshold = 0.8f;
+    int tooFarResetTimeoutMs = 1000;
 };
     
-} // namespace leia::head
+} // namespace head
+} // namespace leia

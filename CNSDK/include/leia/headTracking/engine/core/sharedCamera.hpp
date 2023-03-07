@@ -3,10 +3,13 @@
 #include "leia/headTracking/engine/core/camera.hpp"
 
 #include <functional>
+#include <atomic>
 
-namespace leia { struct SharedCameraSink; }
+namespace leia {
 
-namespace leia::head {
+struct SharedCameraSink;
+
+namespace head {
 
 /// SharedCamera allows a user to manage the camera.
 ///
@@ -20,16 +23,20 @@ public:
     LHT_ENGINE_API
     ~SharedCamera() override;
 
-    void StartCapture() override {};
+    void StartCapture(CameraCaptureConfiguration const&) override {};
     void StopCapture() override {};
 
     int GetFps() const override { return 0; }
     bool SetFps(int) override { return false; }
     Slice<const int> GetSupportedFps() const override { return {}; }
 
+    float GetLux() const override { return _lux; }
+
 private:
     Listener* _listener;
     SharedCameraSink* _sharedCameraSink;
+    std::atomic<float> _lux = kInvalidLux;
 };
 
-} // namespace leia::head
+} // namespace head
+} // namespace leia

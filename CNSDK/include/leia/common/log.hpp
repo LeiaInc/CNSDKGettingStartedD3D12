@@ -64,6 +64,11 @@ DEFINE_CUSTOM_FORMATTING(leia::ImageDesc,
 DEFINE_CUSTOM_FORMATTING(leia::CameraIntrinsics,
      "{{.width={}, .height={}, .ppx={}, .ppy={}, .fx={}, .fy={}, .isMirrored={}}}",
      v.width, v.height, v.ppx, v.ppy, v.fx, v.fy, v.isMirrored);
+DEFINE_CUSTOM_FORMATTING(leia::FaceDetectorConfig,
+     "{{.backend={}, .inputType={}}}",
+     leia::ToStr(v.backend), leia::ToStr(v.inputType));
+DEFINE_CUSTOM_FORMATTING(leia::SourceLocation,
+     "{} {}:{}", v.funcname, v.filename, v.line);
 
 namespace leia {
 

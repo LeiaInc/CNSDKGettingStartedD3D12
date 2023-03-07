@@ -6,8 +6,8 @@ namespace LeiaHeadTracking
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct KalmanCoeffs
     {
-        public Vector3 a;
-        public Vector3 b;
+        public Leia.Vector3 a;
+        public Leia.Vector3 b;
     }
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct FilterProperties
@@ -21,8 +21,8 @@ namespace LeiaHeadTracking
         public float interocularDistanceMin;
         public float interocularDistanceMax;
         public float bufferLim;
-        public Vector3 mainFaceSkew;
-        public Vector3 mainFaceScale;
+        public Leia.Vector3 mainFaceSkew;
+        public Leia.Vector3 mainFaceScale;
         public KalmanCoeffs kalman;
     }
 
@@ -37,7 +37,7 @@ namespace LeiaHeadTracking
 
             public Int32 detectorMaxNumOfFaces;
 
-            public LogLevel logLevel;
+            public Leia.LogLevel logLevel;
 
             public FilterProperties filterProperties;
 
@@ -49,7 +49,7 @@ namespace LeiaHeadTracking
             public Int32 enablePolling;
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-            public delegate void virtual_face_hook(Timestamp timestamp, IntPtr implementMe, IntPtr handle);
+            public delegate void virtual_face_hook(Leia.Timestamp timestamp, IntPtr implementMe, IntPtr handle);
             public virtual_face_hook virtualFaceHook;
             public IntPtr virtualFaceHookUserData;
         }
@@ -81,7 +81,7 @@ namespace LeiaHeadTracking
         {
             Utils.HandleNativeCall(leiaHeadTrackingEngineSetTrackedEyes(_engine, leftEye ? 1 : 0, rightEye ? 1 : 0));
         }
-        public void SetCameraTransform(Vector3 position, Vector3 rotation)
+        public void SetCameraTransform(Leia.Vector3 position, Leia.Vector3 rotation)
         {
             Utils.HandleNativeCall(leiaHeadTrackingEngineSetCameraTransform(_engine, position, rotation));
         }
@@ -130,7 +130,7 @@ namespace LeiaHeadTracking
         [DllImport("leiaHeadTrackingEngine")]
         private static extern Int32 leiaHeadTrackingEngineSetTrackedEyes(IntPtr engine, Int32 left_eye, Int32 right_eye);
         [DllImport("leiaHeadTrackingEngine")]
-        private static extern Int32 leiaHeadTrackingEngineSetCameraTransform(IntPtr engine, Vector3 position, Vector3 rotation);
+        private static extern Int32 leiaHeadTrackingEngineSetCameraTransform(IntPtr engine, Leia.Vector3 position, Leia.Vector3 rotation);
         [DllImport("leiaHeadTrackingEngine")]
         private static extern Int32 leiaHeadTrackingEngineSetCameraPosition(IntPtr engine, float x, float y, float z);
         [DllImport("leiaHeadTrackingEngine")]

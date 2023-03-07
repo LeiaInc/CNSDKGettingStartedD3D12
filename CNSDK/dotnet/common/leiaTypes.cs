@@ -52,4 +52,10 @@ namespace Leia
 
         Count = 2,
     }
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct FaceDetectorConfig
+    {
+        public FaceDetectorBackend backend;
+        public FaceDetectorInputType inputType;
+    }
 }

@@ -6,7 +6,10 @@
 
 #include <vector>
 
-namespace leia::head {
+namespace leia {
+namespace head {
+
+class LowPassFilter;
 
 struct FaceDetectorConfiguration {
     // Max number of faces to be detected at the same time, note that the limit for this number depends on a concrete FaceDetector implementation.
@@ -14,6 +17,8 @@ struct FaceDetectorConfiguration {
     int maxNumOfFaces = 0;
     FaceDetectorBackend backend = kLeiaFaceDetectorBackendUnknown;
     FaceDetectorInputType inputType = kLeiaFaceDetectorInputTypeUnknown;
+
+    LowPassFilter* headPoseZFilter = nullptr;
 };
 
 /// Sole purpose of FaceDetector is to detect faces on CameraFrame.
@@ -35,6 +40,9 @@ public:
     };
 
     virtual Output& DetectFaces(CameraFrame const& frame) = 0;
+
+    virtual bool TrackSingleFace(FaceIdx id) = 0;
 };
 
-} // namespace leia::head
+} // namespace head
+} // namespace leia

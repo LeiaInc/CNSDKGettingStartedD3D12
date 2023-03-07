@@ -36,9 +36,27 @@ struct D3D12_CPU_DESCRIPTOR_HANDLE;
 typedef enum D3D12_RESOURCE_STATES;
 #endif
 
+#if defined(LEIA_USE_VULKAN)
+// Note: We forward-declare Vulkan objects to avoid including the Vulkan SDK header.
+//       Unfortunately we need two untyped enums VkFormat and VkImageLayout that can't be forward-declared on some compilers.
+//       Our solution is to declare and use two integer types VkFormatInt and VkImageLayoutInt that can safely be cast to/from the Vulkan enums.
+typedef struct VkDevice_T* VkDevice;
+typedef struct VkPhysicalDevice_T* VkPhysicalDevice;
+typedef struct VkFramebuffer_T* VkFramebuffer;
+typedef struct VkImage_T* VkImage;
+typedef struct VkImageView_T* VkImageView;
+typedef struct VkSemaphore_T* VkSemaphore;
+typedef struct VkCommandBuffer_T* VkCommandBuffer;
+typedef struct VkRenderPass_T* VkRenderPass;
+typedef struct VkQueue_T* VkQueue;
+typedef int VkFormatInt;
+typedef int VkImageLayoutInt;
+#endif
+
 struct leia_sdk_image_desc;
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 struct LeiaInterlaceParameters;
 struct DebugMenuInitArgs;
@@ -64,8 +82,45 @@ struct IThreadedInterlacer {
     virtual void SetAlpha(float newAlpha) = 0;
     virtual void SetViewportPosition(int newXPos, int newYPos) = 0;
     virtual void ApplyInterlacing(int width, int height, bool blended) = 0;
-    virtual void ApplySharpening(int width, int height) = 0;
+    virtual void ApplySharpening(int width, int height, bool blended) = 0;
     virtual bool UpdateBuffers(int viewCount, eBufferType bufferType, int width, int height) = 0;
+    virtual float GetConvergenceDistance() const = 0;
+    virtual void SetConvergenceDistance(float distance) = 0;
+    virtual float GetBaselineScaling() const = 0;
+    virtual void SetBaselineScaling(float baseline) = 0;
+
+    virtual void GetConvergedOrthographicViewInfo
+    (
+        int        viewIndex,
+        const      glm::vec3& cameraPos,
+        const      glm::vec3& cameraDir,
+        const      glm::vec3& cameraUp,
+        float      width,
+        float      height,
+        float      nearPlane,
+        float      farPlane,
+        glm::vec3* viewPos              = nullptr,
+        glm::mat4* viewProjectionMatrix = nullptr,
+        float*     viewShearX           = nullptr,
+        float*     viewShearY           = nullptr
+    ) = 0;
+
+    virtual void GetConvergedPerspectiveViewInfo
+    (
+        int              viewIndex,
+        const glm::vec3& cameraPos,
+        const glm::vec3& cameraDir,
+        const glm::vec3& cameraUp,
+        float            fieldOfView,
+        float            aspectRatio,
+        float            nearPlane,
+        float            farPlane,
+        glm::vec3*       viewPos              = nullptr,
+        glm::mat4*       viewProjectionMatrix = nullptr,
+        float*           viewFieldOfView      = nullptr,
+        float*           viewShearX           = nullptr,
+        float*           viewShearY           = nullptr
+    ) = 0;
 
 #if defined(LEIA_USE_OPENGL)
     virtual void InitializeOpenGL(HGLRC context, eLeiaTaskResponsibility buffersResponsibility, eLeiaTaskResponsibility shadersResponsibility, eLeiaTaskResponsibility renderingResponsibility) = 0;
@@ -101,6 +156,21 @@ struct IThreadedInterlacer {
     virtual void SetInterlaceViewTextureAtlas(ID3D12Resource* texture) = 0;
 #endif
 
+#if defined(LEIA_USE_VULKAN)
+    virtual void InitializeVulkan(VkDevice device, VkPhysicalDevice physicalDevice, VkFormatInt textureFormat, VkFormatInt renderTargetFormat, VkFormatInt depthStencilFormat, int maxInFlightFrameCount, eLeiaTaskResponsibility _buffersResponsibility, eLeiaTaskResponsibility _shadersResponsibility, eLeiaTaskResponsibility _renderingResponsibility) = 0;
+    virtual void GetRenderTargetView(int view, VkImageView* handle) = 0;
+    virtual VkFramebuffer GetFramebuffer(int view) = 0;
+    virtual VkImage GetRenderTargetImage(int view, VkImageLayoutInt* layout = nullptr) = 0;
+    virtual VkImage GetDepthStencilImage(int view, VkImageLayoutInt* layout = nullptr) = 0;
+    virtual int GetRenderTargetImageWidth() = 0;
+    virtual int GetRenderTargetImageHeight() = 0;
+    virtual void DoPostProcess(int width, int height, bool blendedInterlace, VkFramebuffer frameBuffer, VkImage colorImage, VkImage depthImage, VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore, int currentFrame) = 0;
+    virtual void DoPostProcessPicture(int width, int height, VkImage pictureResource, VkFramebuffer frameBuffer, VkImage colorImage, VkImage depthImage, VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore, int currentFrame) = 0;
+    virtual void SetViewTextureId(VkImage view) = 0;
+    virtual void SetInterlaceViewTextureAtlas(VkImage texture) = 0;
+#endif
+
+
     virtual void OnWindowSizeChanged(int width, int height) = 0;
     virtual void GetInterlaceParameters(LeiaInterlaceParameters& interlaceParameters) const = 0;
     virtual std::string GetInterlaceShaderText(eLeiaShaderType shaderType) const = 0;
@@ -112,6 +182,8 @@ struct IThreadedInterlacer {
     virtual void SetFitMode(eFitMode mode) = 0;
     virtual eFitMode GetFitMode() const = 0;
     virtual void SetCustomTextureMatrix(const glm::mat4& textureTransform) = 0;
+	virtual void GetFocusZoom(float *scaleFocus) = 0;
+	virtual void SetFocusZoom(float scaleX, float scaleY, float focusX, float focusY) = 0;
     virtual void EnableReconvergence(bool enable) = 0;
     virtual bool IsReconvergenceEnabled() const = 0;
     virtual void SetReconvergence(float value) = 0;
@@ -133,4 +205,5 @@ struct IThreadedInterlacer {
     virtual float GetAspectRatioOffset() const = 0;
 };
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

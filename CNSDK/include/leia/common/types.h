@@ -47,6 +47,23 @@ typedef enum leia_face_detector_input_type_e {
     kNumLeiaFaceDetectorInputTypes = 2,
 } leia_face_detector_input_type;
 
+typedef struct leia_face_detector_config_s {
+    leia_face_detector_backend backend;
+    leia_face_detector_input_type inputType;
+} leia_face_detector_config;
+
+typedef struct leia_source_location_s {
+    const char* filename;
+    const char* funcname;
+    int line;
+} leia_source_location;
+
+#ifndef LEIA_FUNCTION
+# define LEIA_FUNCTION __FUNCTION__
+#endif
+
+#define LEIA_SOURCE_LOCATION leia_source_location{__FILE__, LEIA_FUNCTION, __LINE__}
+
 #pragma pack(pop)
 
 END_CAPI_DECL

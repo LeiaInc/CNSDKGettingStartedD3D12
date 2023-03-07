@@ -16,7 +16,8 @@
 #include <string>
 #include <vector>
 
-namespace leia::opengl {
+namespace leia {
+namespace opengl {
 
 // General purpsoe shader object. Compiles from file, generates
 // compile/link-time error messages and hosts several utility 
@@ -145,6 +146,5 @@ private:
     std::vector<Variant> variants;
 };
 
-
-
-} // namespace leia::opengl
+} // namespace opengl
+} // namespace leia

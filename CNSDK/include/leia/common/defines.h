@@ -32,6 +32,14 @@
 # define LEIA_HIDDEN __attribute__((visibility("hidden")))
 #endif
 
+#if defined(LEIA_OS_ANDROID)
+# define LEIA_CLASS_EXPORT LEIA_EXPORT
+# define LEIA_CLASS_IMPORT LEIA_IMPORT
+#else
+# define LEIA_CLASS_EXPORT
+# define LEIA_CLASS_IMPORT
+#endif
+
 #ifdef __cplusplus
 #define BEGIN_CAPI_DECL extern "C" {
 #define END_CAPI_DECL }
@@ -49,8 +57,8 @@
 // New renderer: Enable all lines below.
 #define LEIA_USE_NEW_RENDERER
 #define LEIA_USE_OPENGL
+#define LEIA_USE_VULKAN
 #ifdef LEIA_OS_WINDOWS
 #define LEIA_USE_DIRECTX
 #define LEIA_USE_DIRECTX12
 #endif
-

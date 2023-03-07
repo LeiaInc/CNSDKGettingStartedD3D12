@@ -5,6 +5,7 @@
 
 #define uniform /**/
 #define highp /**/
+#define gv(x) x
 
 #define InTexCoord input.TexCoord
 #define InScreenTexCoord input.ScreenTexCoord
@@ -15,6 +16,16 @@
 precision mediump float;
 #else
 precision highp float;
+#endif
+
+#if USE_GLSL_VULKAN
+#define gv(x) ubo.x
+#define LAYOUTLOC(x) layout(location = x)
+#define LAYOUTBIND(x) layout(binding = x)
+#else
+#define gv(x) x
+#define LAYOUTLOC(x) /**/
+#define LAYOUTBIND(x) /**/
 #endif
 
 #define float2 vec2
@@ -48,10 +59,10 @@ struct PSInput
 
 #else
 
-in highp vec2 TexCoord;
-in highp vec2 ScreenTexCoord;
+LAYOUTLOC(0) in highp vec2 TexCoord;
+LAYOUTLOC(1) in highp vec2 ScreenTexCoord;
 
-out highp vec4 FragColor;
+LAYOUTLOC(0) out highp vec4 FragColor;
 
 #endif
 
@@ -69,9 +80,9 @@ SamplerState viewSampler : register(s0);
 #else
 
 #ifdef USE_VIDEO_TEXTURE_FOR_VIEWS
-uniform samplerExternalOES viewTexture;
+LAYOUTBIND(1) uniform samplerExternalOES viewTexture;
 #else
-uniform sampler2D viewTexture[12];
+LAYOUTBIND(1) uniform sampler2D viewTexture[12];
 #endif
 
 #endif
@@ -79,6 +90,9 @@ uniform sampler2D viewTexture[12];
 // Global variables (uniforms for GLSL and constant buffer for HLSL)
 #if USE_HLSL == 1
 cbuffer LeiaInterlaceShaderConstantBufferData : register(b0)
+{
+#elif USE_GLSL_VULKAN == 1
+LAYOUTBIND(0) uniform UniformBufferObject
 {
 #endif
 
@@ -141,10 +155,18 @@ cbuffer LeiaInterlaceShaderConstantBufferData : register(b0)
     uniform highp float customTextureScaleY;
     uniform highp float reconvergenceZoomX;
     uniform highp float reconvergenceZoomY;
-    //Must have 16 byte padding
+
+#if  SP_ACT == 1
+    uniform float ACT_gamma;
+    uniform float ACT_invGamma;
+    uniform float ACT_singletap_coef;
+    uniform float ACT_norm;
+#endif
 
 #if USE_HLSL == 1
 };
+#elif USE_GLSL_VULKAN == 1
+} ubo;
 #endif
 
 float4 sampleTexture(int viewIndex, float2 uv)
@@ -176,8 +198,8 @@ float4 debugSampleAllTextures(float2 uv, int rows, int cols)
     int row = int(uv.y * float(rows));
     float u = (uv.x - float(col / cols)) * float(cols);
     float v = (uv.y - float(row / rows)) * float(rows);
-    int viewIndex = row*cols+col;
-    return sampleTexture(viewIndex, float2(u,v));
+    int viewIndex = row * cols + col;
+    return sampleTexture(viewIndex, float2(u, v));
 }
 
 highp float3 periodic_mod(highp float3 a, highp float3 b)
@@ -187,20 +209,20 @@ highp float3 periodic_mod(highp float3 a, highp float3 b)
 
 highp float N(highp float x, highp float y, highp float z, highp float x0, highp float y0)
 {
-    highp float dx     = s*x0 + (cos_theta-1.0)*x0 - sin_theta*y0;
-    highp float dy     = s*y0 + (cos_theta-1.0)*y0 + sin_theta*x0;
-    highp float denom  = sqrt(z*z + (1.0 - 1.0/(n*n))*((x-x0)*(x-x0) + (y-y0)*(y-y0)));
-    highp float u      = dx + d_over_n*(x-x0)/denom;
-    highp float v      = dy + d_over_n*(y-y0)/denom;
-    highp float result = u/du + v/dv;
-    return No + result;
+    highp float dx = gv(s) * x0 + (gv(cos_theta) - 1.0) * x0 - gv(sin_theta) * y0;
+    highp float dy = gv(s) * y0 + (gv(cos_theta) - 1.0) * y0 + gv(sin_theta) * x0;
+    highp float denom = sqrt(z * z + (1.0 - 1.0 / (gv(n) * gv(n))) * ((x - x0) * (x - x0) + (y - y0) * (y - y0)));
+    highp float u = dx + gv(d_over_n) * (x - x0) / denom;
+    highp float v = dy + gv(d_over_n) * (y - y0) / denom;
+    highp float result = u / gv(du) + v / gv(dv);
+    return gv(No) + result;
 }
 
 float4 sampleDebugStereoTexture(float2 uv, int viewIndex)
 {
-    float u = ((float(viewIndex) < (hardwareViewsX/2.0)) ? 0.0 : 0.5) + (uv.x * 0.5);
+    float u = ((float(viewIndex) < (gv(hardwareViewsX) / 2.0)) ? 0.0 : 0.5) + (uv.x * 0.5);
     float v = uv.y;
-    return sampleTexture(0, float2(u,v));
+    return sampleTexture(0, float2(u, v));
 }
 
 float4 sampleDebugThumbnailTexture(float2 uv, int viewIndex)
@@ -212,38 +234,38 @@ float4 sampleDebugThumbnailTexture(float2 uv, int viewIndex)
 
 float4 sampleDebugCalibrationTexture(float2 uv, int viewIndex)
 {
-         if (viewIndex == 0)  return sampleTexture(0, float2(0.0,   0.75) + float2(0.333, 0.25) * uv.xy);
+    if (viewIndex == 0)  return sampleTexture(0, float2(0.0, 0.75) + float2(0.333, 0.25) * uv.xy);
     else if (viewIndex == 1)  return sampleTexture(0, float2(0.333, 0.75) + float2(0.333, 0.25) * uv.xy);
     else if (viewIndex == 2)  return sampleTexture(0, float2(0.666, 0.75) + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 3)  return sampleTexture(0, float2(0.0,   0.5)  + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 4)  return sampleTexture(0, float2(0.333, 0.5)  + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 5)  return sampleTexture(0, float2(0.666, 0.5)  + float2(0.333, 0.25) * uv.xy);  
-    else if (viewIndex == 6)  return sampleTexture(0, float2(0.0,   0.25) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 3)  return sampleTexture(0, float2(0.0, 0.5) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 4)  return sampleTexture(0, float2(0.333, 0.5) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 5)  return sampleTexture(0, float2(0.666, 0.5) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 6)  return sampleTexture(0, float2(0.0, 0.25) + float2(0.333, 0.25) * uv.xy);
     else if (viewIndex == 7)  return sampleTexture(0, float2(0.333, 0.25) + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 8)  return sampleTexture(0, float2(0.666, 0.25) + float2(0.333, 0.25) * uv.xy);  
-    else if (viewIndex == 9)  return sampleTexture(0, float2(0.0,   0.0)  + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 10) return sampleTexture(0, float2(0.333, 0.0)  + float2(0.333, 0.25) * uv.xy);
-    else if (viewIndex == 11) return sampleTexture(0, float2(0.666, 0.0)  + float2(0.333, 0.25) * uv.xy);    
-    return float4(0,0,0,1); 
+    else if (viewIndex == 8)  return sampleTexture(0, float2(0.666, 0.25) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 9)  return sampleTexture(0, float2(0.0, 0.0) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 10) return sampleTexture(0, float2(0.333, 0.0) + float2(0.333, 0.25) * uv.xy);
+    else if (viewIndex == 11) return sampleTexture(0, float2(0.666, 0.0) + float2(0.333, 0.25) * uv.xy);
+    return float4(0, 0, 0, 1);
 }
 
-float4 sample_view(float2 uv, int viewIndex) 
+float4 sample_view(float2 uv, int viewIndex)
 {
-//if (viewIndex < minView || viewIndex > maxView)
-//  return float4(0.0,0.0,0.0,1.0);
+    //if (viewIndex < minView || viewIndex > maxView)
+    //  return float4(0.0,0.0,0.0,1.0);
 
 #if DEBUG_WHITE_VIEW //debug first view white, rest black
-    if(viewIndex == 0)
+    if (viewIndex == 0)
     {
-        return float4(1.0,1.0,1.0,1.0);
+        return float4(1.0, 1.0, 1.0, 1.0);
     }
     else
     {
-        return float4(0.0,0.0,0.0,1.0);
+        return float4(0.0, 0.0, 0.0, 1.0);
     }
 #endif 
 
-    float actualSoftwareView = floor(float(viewIndex) / hardwareViewsX * softwareViews);
+    float actualSoftwareView = floor(float(viewIndex) / gv(hardwareViewsX) * gv(softwareViews));
 
 #if ENABLE_RECONVERGENCE == 1
 
@@ -252,11 +274,9 @@ float4 sample_view(float2 uv, int viewIndex)
     //       - OPTIONAL: apply x-scaling to avoid de-occlusions on sides (zoomX)
     //       - OPTIONAL: apply additional y-scaling to conserve image aspect ratio (zoomXY)
 
-    float isRight = actualSoftwareView;
-
-    uv.x = (1.0 - reconvergenceZoomX * absReconvergenceAmount) * (uv.x - 0.5) + 0.5 + (0.5 - isRight) * reconvergenceAmount; // zoom in x only
-
-    uv.y = (1.0 - reconvergenceZoomY * absReconvergenceAmount) * (uv.y - 0.5) + 0.5; // uncomment to add zoom in y direction to conserve image aspect ratio
+    float isLeft = actualSoftwareView;
+    uv.x = (1.0 - gv(reconvergenceZoomX) * gv(absReconvergenceAmount)) * (uv.x - 0.5) + 0.5 + 0.5 * (2.0 * isLeft - 1.0) * gv(reconvergenceAmount); // zoom in x only
+    uv.y = (1.0 - gv(reconvergenceZoomY) * gv(absReconvergenceAmount)) * (uv.y - 0.5) + 0.5; // uncomment to add zoom in y direction to conserve image aspect ratio
 #endif
 
 #ifdef SHOW_CALIBRATION_IMAGE
@@ -277,14 +297,14 @@ float4 sample_view(float2 uv, int viewIndex)
 #elif defined(STEREO_INDIVIDUAL_VIEWS)
 
     // A pair of individual left/right views.
-    return sampleTexture(float(viewIndex) < (hardwareViewsX/2.0) ? 0 : 1, uv);
+    return sampleTexture(float(viewIndex) < (gv(hardwareViewsX) / 2.0) ? 0 : 1, uv);
 
 #elif defined(STEREO_ATLAS_VIEWS)
 
     // Texture atlas of side-by-side left/right views.
-    float u = ((float(viewIndex) < (hardwareViewsX/2.0)) ? 0.0 : 0.5) + (uv.x * 0.5);
+    float u = ((float(viewIndex) < (gv(hardwareViewsX) / 2.0)) ? 0.0 : 0.5) + (uv.x * 0.5);
     float v = uv.y;
-    return sampleTexture(0, float2(u,v));
+    return sampleTexture(0, float2(u, v));
 
 #elif defined(INDIVIDUAL_VIEWS)
 
@@ -293,8 +313,8 @@ float4 sample_view(float2 uv, int viewIndex)
 
 #elif defined(ATLAS_VIEWS)
 
-    float xTextureScale = textureTransform[0][0];
-    float yTextureScale = textureTransform[1][1];
+    float xTextureScale = gv(textureTransform[0][0]);
+    float yTextureScale = gv(textureTransform[1][1]);
 
 #if SINGLE_VIEW_MODE == 1
     actualSoftwareView = 0.0;
@@ -302,13 +322,13 @@ float4 sample_view(float2 uv, int viewIndex)
 
     //Quick support for nx1 & 1xn view sources
 #if HORIZONTAL_SOURCE_VIEWS == 1
-    float viewScale = (1.0 / softwareViews) * customTextureScaleX;
+    float viewScale = (1.0 / gv(softwareViews)) * gv(customTextureScaleX);
     uv.x = (uv.x * viewScale) + (actualSoftwareView * viewScale);
-    uv.y *= customTextureScaleY;
+    uv.y *= gv(customTextureScaleY);
 #else
-    float viewScale = (1.0 / softwareViews) * customTextureScaleY;
+    float viewScale = (1.0 / gv(softwareViews)) * gv(customTextureScaleY);
     uv.y = (uv.y * viewScale) + (actualSoftwareView * viewScale);
-    uv.x *= customTextureScaleX;
+    uv.x *= gv(customTextureScaleX);
 #endif
 
     return sampleTexture(0, uv);
@@ -318,35 +338,70 @@ float4 sample_view(float2 uv, int viewIndex)
     return float4(0.0, 0.0, 0.0, 0.0);
 }
 
+#if  SP_ACT == 1
+
+vec3 GammaToLinear(vec4 col)
+{
+    //Driver bug with android video textures that creates artifacts if any value of col is negative
+#if defined(USE_VIDEO_TEXTURE_FOR_VIEWS) && (USE_HLSL == 0)
+    col = max(col, 0.0);
+#endif
+
+    return vec3(pow(col.r, ACT_gamma), pow(col.g, ACT_gamma), pow(col.b, ACT_gamma));
+}
+
+vec4 LinearToGamma(vec4 col)
+{
+    return vec4(pow(col.r, ACT_invGamma), pow(col.g, ACT_invGamma), pow(col.b, ACT_invGamma), col.a);
+}
+#endif
+
 float4 sample_view(float2 uv, float view)
 {
     //if (blendViews == 0.0)
         //return sample_view(uv, int(view));
 
-    float black_point    = 0.0;
-    float white_point    = 1.0;
-    float view1          = fmod(floor(view), hardwareViewsX);
-    float view2          = fmod(floor(view1 + 1.1), hardwareViewsX);
-    float linear_mix     = (view - view1);
+    float black_point = 0.0;
+    float white_point = 1.0;
+    float view1 = fmod(floor(view), gv(hardwareViewsX));
+    float view2 = fmod(floor(view1 + 1.1), gv(hardwareViewsX));
+    float linear_mix = (view - view1);
     float non_linear_mix = smoothstep(black_point, white_point, linear_mix);
-    float4 a             = sample_view(uv, int(view1));
-    float4 b             = sample_view(uv, int(view2));
 
-    return lerp(a, b, non_linear_mix * blendViews);
+#if  SP_ACT == 0
+    float4 a = sample_view(uv, int(view1));
+    float4 b = sample_view(uv, int(view2));
+
+    return lerp(a, b, non_linear_mix * gv(blendViews));
+#else
+    vec4 a = vec4(0.0, 0.0, 0.0, 1.0);
+    a.rgb += GammaToLinear(sample_view(uv, int(view1)));
+    a.rgb -= ACT_singletap_coef * GammaToLinear(sample_view(uv, int(mod(view1 + (floor(gv(hardwareViewsX) / 2.0)), gv(hardwareViewsX)))));
+    a.rgb *= ACT_norm;
+
+    vec4 b = vec4(0.0, 0.0, 0.0, 1.0);
+    b.rgb += GammaToLinear(sample_view(uv, int(view2)));
+    b.rgb -= ACT_singletap_coef * GammaToLinear(sample_view(uv, int(mod(view2 - (floor(gv(hardwareViewsX) / 2.0)), gv(hardwareViewsX)))));
+    b.rgb *= ACT_norm;
+
+    return LinearToGamma(clamp(mix(a, b, non_linear_mix * gv(blendViews)), 0.0, 1.0));
+
+#endif
+
 }
 
 highp float3 calculateViewVector(highp float2 uv)
 {
     highp float3 views;
 
-    highp float baseView = (p_over_du * displayResX * uv.x) + (p_over_dv * displayResY * uv.y) + fmod(colorSlant * displayResY * uv.y, p_over_du);
+    highp float baseView = (gv(p_over_du) * gv(displayResX) * uv.x) + (gv(p_over_dv) * gv(displayResY) * uv.y) + fmod(gv(colorSlant) * gv(displayResY) * uv.y, gv(p_over_du));
     views.r = baseView;
     views.g = baseView;
     views.b = baseView;
 
-    views.r += 2.0 * colorInversion;
+    views.r += 2.0 * gv(colorInversion);
     views.g += 1.0;
-    views.b += 2.0 * (1.0 - colorInversion);
+    views.b += 2.0 * (1.0 - gv(colorInversion));
 
     return views;
 }
@@ -355,39 +410,41 @@ highp float3 calculateViewIndices(highp float2 normalized_display_coord)
 {
     highp float3 viewVector = calculateViewVector(normalized_display_coord);
 
-    highp float viewCount = hardwareViewsX * hardwareViewsY;
+    highp float viewCount = gv(hardwareViewsX) * gv(hardwareViewsY);
     // correct some float precision issues with this offset
-    highp float correction = - 1.0 / max(2.0, viewCount);
+    highp float correction = -1.0 / max(2.0, viewCount);
 
     highp float float_precision_offset = 0.0;
-    
+
     //#if DirectX set offset to 0
-    highp float user_offset =  0.0;
+    highp float user_offset = 0.0;
 
 #if DEBUG_WHITE_VIEW
-     // we want todo no PPC!
+    // we want todo no PPC!
 #else
+    highp float top = gv(displayResY) - gv(viewportHeight) - gv(viewportY);
 
-    #if PIXELCORRECTION == 1 // View peeling
-            float x0 = (normalized_display_coord.x - 0.5) * displayResX * pixelPitch;
-         //there is a strong likelyhood this is all we need and the #define was being used multiple times incorrectly, lee & cyrus to verify
-            float y0 = (normalized_display_coord.y - 0.5) * displayResY * pixelPitch;
+#if PIXELCORRECTION == 1 // View peeling
+    highp float x0 = (normalized_display_coord.x * gv(viewportWidth) + gv(viewportX) - 0.5 * gv(displayResX)) * gv(pixelPitch);
 
-                float dN = N(faceX, faceY, faceZ, 0.0, 0.0) - N(faceX, faceY, faceZ, x0, y0);
-                user_offset += (viewCount - 1.0) * 0.5 - No;
-                user_offset -= peelOffset;
-                user_offset += dN;
-    #elif PIXELCORRECTION == 2 // stereo sliding
-         highp float x0 = (normalized_display_coord.x - 0.5) * displayResX * pixelPitch;
-    
-         //there is a strong likelyhood this is all we need and the #define was being used multiple times incorrectly, lee & cyrus to verify
-         highp float y0 = (normalized_display_coord.y - 0.5) * displayResY * pixelPitch;
-         user_offset += (viewCount - fmod(viewCount + 1.0, 2.0)) * 0.5 - N(faceX, faceY, faceZ, x0, y0);
-    #endif
+    //there is a strong likelihood this is all we need and the #define was being used multiple times incorrectly, lee & cyrus to verify
+    highp float y0 = (normalized_display_coord.y * gv(viewportHeight) - gv(viewportHeight) - top + 0.5 * gv(displayResY)) * gv(pixelPitch);
+
+    float dN = N(gv(faceX), gv(faceY), gv(faceZ), 0.0, 0.0) - N(gv(faceX), gv(faceY), gv(faceZ), x0, y0);
+    user_offset += (viewCount - 1.0) * 0.5 - gv(No);
+    user_offset -= peelOffset;
+    user_offset += dN;
+#elif PIXELCORRECTION == 2 // stereo sliding
+    highp float x0 = (normalized_display_coord.x * gv(viewportWidth) + gv(viewportX) - 0.5 * gv(displayResX)) * gv(pixelPitch);
+
+    // there is a strong likelihood this is all we need and the #define was being used multiple times incorrectly, lee & cyrus to verify
+    highp float y0 = (normalized_display_coord.y * gv(viewportHeight) - gv(viewportHeight) - top + 0.5 * gv(displayResY)) * gv(pixelPitch);
+    user_offset += (viewCount - fmod(viewCount + 1.0, 2.0)) * 0.5 - N(gv(faceX), gv(faceY), gv(faceZ), x0, y0);
+#endif
 
 #endif
 
-    user_offset -= p_over_dv*(displayResY-1.0);
+    user_offset -= gv(p_over_dv) * (gv(displayResY) - 1.0);
 
     // last row / row "3" of viewMatrix is ith view index,
     highp float3 views = periodic_mod(viewVector + user_offset + float_precision_offset, float3(viewCount, viewCount, viewCount));
@@ -401,12 +458,12 @@ float4 main(PSInput input) : SV_Target0
 void main()
 #endif
 {
-    highp float2 texture_offset = float2(0.5, 0.5) / float2(displayResX, displayResY);
+    highp float2 texture_offset = float2(0.5, 0.5) / float2(gv(displayResX), gv(displayResY));
     highp float2  uv = InScreenTexCoord;
-    highp float u0 = float(viewportX)/ float(displayResX);
-    highp float v0 = float(viewportY)/ float(displayResY);
-    highp float u1 = float(viewportX+viewportWidth)/ float(displayResX);
-    highp float v1 = float(viewportY+viewportHeight)/ float(displayResY);
+    highp float u0 = float(gv(viewportX)) / float(gv(displayResX));
+    highp float v0 = float(gv(viewportY)) / float(gv(displayResY));
+    highp float u1 = float(gv(viewportX) + gv(viewportWidth)) / float(gv(displayResX));
+    highp float v1 = float(gv(viewportY) + gv(viewportHeight)) / float(gv(displayResY));
     uv = lerp(float2(u0, v0), float2(u1, v1), uv);
     highp float2 normalized_display_coord = uv - texture_offset;
 
@@ -419,9 +476,9 @@ void main()
     interlaced_fragment[0] = sample_view(normalized_display_coord, viewIndices[0]).r;
     interlaced_fragment[1] = sample_view(normalized_display_coord, viewIndices[1]).g;
     interlaced_fragment[2] = sample_view(normalized_display_coord, viewIndices[2]).b;
-    interlaced_fragment[3] = alpha;
+    interlaced_fragment[3] = gv(alpha);
 
-    float4 retColor  = interlaced_fragment; 
+    float4 retColor = interlaced_fragment;
 
 #if defined(SHOW_TEXTURE_COORDINATES)
     retColor = float4(InTexCoord.x, InTexCoord.y, 0.0, 1.0); // Show texture coordinates

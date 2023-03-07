@@ -1,19 +1,16 @@
-// Project Requirements:
-//    C++17
-//    3 Additional include paths for CNSDK
-
 #include <stdio.h>
-
-// CNSDKGettingStartedD3D11 includes
+#include <assert.h>
 #include "framework.h"
-#include "CNSDKGettingStartedD3D12.h"
-#include "CNSDKGettingStartedMath.h"
 
 // CNSDK includes
 #include "leia/sdk/sdk.hpp"
 #include "leia/sdk/interlacer.hpp"
 #include "leia/sdk/debugMenu.hpp"
 #include "leia/common/platform.hpp"
+
+// CNSDKGettingStartedD3D11 includes
+#include "CNSDKGettingStartedD3D12.h"
+#include "CNSDKGettingStartedMath.h"
 
 // D3D11 includes.
 #include <d3d12.h>
@@ -40,26 +37,27 @@ enum class eDemoMode { Spinning3DCube, StereoImage };
 void InitializeOffscreenFrameBuffer();
 
 // Global Variables.
-const wchar_t*                  g_windowTitle       = L"CNSDK Getting Started D3D12 Sample";
-const wchar_t*                  g_windowClass       = L"CNSDKGettingStartedD3D12WindowClass";
-int                             g_windowWidth       = 1280;
-int                             g_windowHeight      = 720;
-bool                            g_fullscreen        = true;
-leia::sdk::ILeiaSDK*            g_sdk               = nullptr;
-leia::sdk::IThreadedInterlacer* g_interlacer        = nullptr;
-eDemoMode                       g_demoMode          = eDemoMode::Spinning3DCube;
+const wchar_t*                  g_windowTitle                  = L"CNSDK Getting Started D3D12 Sample";
+const wchar_t*                  g_windowClass                  = L"CNSDKGettingStartedD3D12WindowClass";
+int                             g_windowWidth                  = 1280;
+int                             g_windowHeight                 = 720;
+bool                            g_fullscreen                   = true;
+leia::sdk::ILeiaSDK*            g_sdk                          = nullptr;
+leia::sdk::IThreadedInterlacer* g_interlacer                   = nullptr;
+eDemoMode                       g_demoMode                     = eDemoMode::Spinning3DCube;
+float                           g_geometryDist                 = 500;
+bool                            g_perspective                  = true;
+float                           g_perspectiveCameraFiledOfView = 90.0f * 3.14159f / 180.0f;
+float                           g_orthographicCameraHeight     = 500.0f;
 
 // Global D3D12 Variables.
 const int                     g_frameCount                        = 2;
-
 ID3D12Device*                 g_device                            = nullptr;
 ID3D12CommandQueue*           g_commandQueue                      = nullptr;
 ID3D12CommandAllocator*       g_commandAllocator[g_frameCount]    = {};
-
 IDXGISwapChain3*              g_swapChain                         = nullptr;
 int                           g_frameIndex                        = 0;
 DXGI_FORMAT                   g_swapChainFormat                   = DXGI_FORMAT_R8G8B8A8_UNORM;
-
 ID3D12DescriptorHeap*         g_srvHeap                           = nullptr;
 D3D12_CPU_DESCRIPTOR_HANDLE   g_srvFontCpuDescHandle              = {};
 D3D12_GPU_DESCRIPTOR_HANDLE   g_srvFontGpuDescHandle              = {};
@@ -67,54 +65,43 @@ UINT                          g_srvDescriptorSize                 = 0;
 UINT                          g_srvHeapUsed                       = 0;
 ID3D12CommandAllocator*       g_guiCommandAllocator[g_frameCount] = {};
 ID3D12GraphicsCommandList*    g_guiCommandList                    = nullptr;
-
-ID3D12GraphicsCommandList* textureUploadCommandList = nullptr;
-
-
+ID3D12GraphicsCommandList*    g_textureUploadCommandList          = nullptr;
 ID3D12Resource*               g_renderTargets[g_frameCount]       = {};
 ID3D12DescriptorHeap*         g_rtvHeap                           = nullptr;
 UINT                          g_rtvDescriptorSize                 = 0;
 UINT                          g_rtvHeapUsed                       = 0;
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_renderTargetViews[g_frameCount]   = {};
-
 ID3D12Resource*               g_depthStencil[g_frameCount]        = {};
 ID3D12DescriptorHeap*         g_dsvHeap                           = nullptr;
 UINT                          g_dsvDescriptorSize                 = 0;
 UINT                          g_dsvHeapUsed                       = 0;
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_depthStencilViews[g_frameCount]   = {};
-
 ID3D12Fence*                  g_fence                             = nullptr;
 UINT64                        g_fenceValues[g_frameCount]         = {};
 HANDLE                        g_fenceEvent                        = NULL;
-
 ID3D12Resource*               g_offscreenTexture                  = nullptr;
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenShaderResourceView       = {};
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenRenderTargetView         = {};
 ID3D12Resource*               g_offscreenDepthTexture             = nullptr;
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenDepthStencilView         = {};
 const FLOAT                   g_offscreenColor[4]                 = { 0.0f, 0.2f, 0.5f, 1.0f };
-
 const FLOAT                   g_backbufferColor[4]                = { 0.0f, 0.4f, 0.0f, 1.0f };
-
 ID3D12Resource*               g_vertexBuffer                      = nullptr;
 ID3D12Resource*               g_indexBuffer                       = nullptr;
 D3D12_VERTEX_BUFFER_VIEW      g_vertexBufferView                  = {};
 D3D12_INDEX_BUFFER_VIEW       g_indexBufferView                   = {};
-
 D3D12_INPUT_LAYOUT_DESC       g_inputLayoutDesc                   = {};
-
 ID3D12Resource*               g_constantBuffer[2]                 = {};
 void*                         g_constantBufferDataBegin[2]        = {};
-
 ID3D12GraphicsCommandList*    g_commandList                       = nullptr;
 ID3D12GraphicsCommandList*    g_commandList2                      = nullptr;
-
 ID3D12RootSignature*          g_rootSignature                     = nullptr;
 ID3D12PipelineState*          g_pipelineState                     = nullptr;
 ID3DBlob*                     g_compiledVertexShaderBlob          = nullptr;
 ID3DBlob*                     g_compiledPixelShaderBlob           = nullptr;
-
 ID3D12Resource*               g_imageTexture                      = nullptr;
+
+#pragma pack(push, 1)
 
 struct CONSTANTBUFFER
 {
@@ -125,7 +112,31 @@ struct VERTEX
 {
     float pos[3];
     float color[3];
+
+    VERTEX() = default;
+
+    VERTEX(const float* p, const float* c)
+    {
+        pos[0] = p[0];
+        pos[1] = p[1];
+        pos[2] = p[2];
+        color[0] = c[0];
+        color[1] = c[1];
+        color[2] = c[2];
+    }
+
+    VERTEX(float p0, float p1, float p2, float c0, float c1, float c2)
+    {
+        pos[0] = p0;
+        pos[1] = p1;
+        pos[2] = p2;
+        color[0] = c0;
+        color[1] = c1;
+        color[2] = c2;
+    }
 };
+
+#pragma pack(pop)
 
 void OnError(const wchar_t* msg)
 {
@@ -414,7 +425,7 @@ void TransitionResourceState(ID3D12GraphicsCommandList* commandList, ID3D12Resou
     commandList->ResourceBarrier(1, &barrier);
 }
 
-HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epilog)
+HRESULT ResizeBuffers(int width, int height)
 {
     if (g_device == nullptr)
         return S_OK;
@@ -502,7 +513,6 @@ HRESULT ResizeBuffers(int width, int height)//bool prolog, bool resize, bool epi
     return S_OK;
 }
 
-
 // Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
 // If no such adapter can be found, *ppAdapter will be set to nullptr.
 void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false)
@@ -567,29 +577,6 @@ void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool
     *ppAdapter = adapter;
 }
 
-/*void WaitForPreviousFrame()
-{
-    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-    // sample illustrates how to use fences for efficient resource usage and to
-    // maximize GPU utilization.
-
-    // Signal and increment the fence value.
-    const UINT64 fenceVal = g_fenceValue;
-    HRESULT hr = g_commandQueue->Signal(g_fence, fenceVal);
-    g_fenceValue++;
-
-    // Wait until the previous frame is finished.
-    if (g_fence->GetCompletedValue() < fenceVal)
-    {
-        hr = g_fence->SetEventOnCompletion(fenceVal, g_fenceEvent);
-        WaitForSingleObject(g_fenceEvent, INFINITE);
-    }
-
-    g_frameIndex = g_swapChain->GetCurrentBackBufferIndex();
-}*/
-
-
 // Prepare to render the next frame.
 void MoveToNextFrame()
 {
@@ -624,7 +611,6 @@ void WaitForGpu()
     // Increment the fence value for the current frame.
     g_fenceValues[g_frameIndex]++;
 }
-
 
 HRESULT InitializeD3D12(HWND hWnd)
 {
@@ -776,13 +762,13 @@ HRESULT InitializeD3D12(HWND hWnd)
 
     {
         // Create command list.
-        hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_commandAllocator[g_frameIndex], nullptr, _uuidof(ID3D12GraphicsCommandList), (void**)&textureUploadCommandList);
+        hr = g_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_commandAllocator[g_frameIndex], nullptr, _uuidof(ID3D12GraphicsCommandList), (void**)&g_textureUploadCommandList);
         if (FAILED(hr))
         {
             assert(false);
         }
 
-        hr = textureUploadCommandList->Close();
+        hr = g_textureUploadCommandList->Close();
         if (FAILED(hr))
         {
             assert(false);
@@ -910,45 +896,82 @@ void LoadScene()
 {
     if (g_demoMode == eDemoMode::Spinning3DCube)
     {
+        const float cubeWidth = 200.0f;
+        const float cubeHeight = 200.0f;
+        const float cubeDepth = 200.0f;
+
+        const float l = -cubeWidth / 2.0f;
+        const float r = l + cubeWidth;
+        const float b = -cubeHeight / 2.0f;
+        const float t = b + cubeHeight;
+        const float n = -cubeDepth / 2.0f;
+        const float f = n + cubeDepth;
+
         const int vertexCount = 8;
-        const int indexCount = 36;
+        const int indexCount  = 36;
 
-        // XYZ|RGB
-        const VERTEX vertices[vertexCount] = {
-            // Front face
-             100.0f,  100.0f,  100.0f, 1.0f, 0.4f, 0.6f,
-            -100.0f,  100.0f,  100.0f, 1.0f, 0.9f, 0.2f,
-            -100.0f, -100.0f,  100.0f, 0.7f, 0.3f, 0.8f,
-             100.0f, -100.0f,  100.0f, 1.0f, 0.3f, 1.0f,
-
-            // Back face
-             100.0f,  100.0f, -100.0f, 0.2f, 0.6f, 1.0f,
-            -100.0f,  100.0f, -100.0f, 0.6f, 1.0f, 0.4f,
-            -100.0f, -100.0f, -100.0f, 0.6f, 0.8f, 0.8f,
-             100.0f, -100.0f, -100.0f, 0.4f, 0.8f, 0.8f,
+        const float cubeVerts[vertexCount][3] =
+        {
+            {l, n, b}, // Left Near Bottom
+            {l, f, b}, // Left Far Bottom
+            {r, f, b}, // Right Far Bottom
+            {r, n, b}, // Right Near Bottom
+            {l, n, t}, // Left Near Top
+            {l, f, t}, // Left Far Top
+            {r, f, t}, // Right Far Top
+            {r, n, t}  // Right Near Top
         };
 
-        const unsigned short indices[indexCount] = {
-            0, 1, 2, // Front
-            2, 3, 0,
-            0, 3, 7, // Right
-            7, 4, 0,
-            2, 6, 7, // Bottom
-            7, 3, 2,
-            1, 5, 6, // Left
-            6, 2, 1,
-            4, 7, 6, // Back
-            6, 5, 4,
-            5, 1, 0, // Top
-            0, 4, 5,
+        static const int faces[6][4] =
+        {
+            {0,1,2,3}, // bottom
+            {1,0,4,5}, // left
+            {0,3,7,4}, // front
+            {3,2,6,7}, // right
+            {2,1,5,6}, // back
+            {4,7,6,5}  // top
         };
+
+        static const float faceColors[6][3] =
+        {
+            {1,0,0},
+            {0,1,0},
+            {0,0,1},
+            {1,1,0},
+            {0,1,1},
+            {1,0,1}
+        };
+
+        std::vector<VERTEX> vertices;
+        std::vector<int> indices;
+        for (int i = 0; i < 6; i++)
+        {
+            const int i0 = faces[i][0];
+            const int i1 = faces[i][1];
+            const int i2 = faces[i][2];
+            const int i3 = faces[i][3];
+
+            // Add indices.
+            const int startIndex = (int)vertices.size();
+            indices.emplace_back(startIndex + 0);
+            indices.emplace_back(startIndex + 2);
+            indices.emplace_back(startIndex + 1);
+            indices.emplace_back(startIndex + 0);
+            indices.emplace_back(startIndex + 3);
+            indices.emplace_back(startIndex + 2);
+
+            vertices.emplace_back(VERTEX(cubeVerts[i0], faceColors[i]));
+            vertices.emplace_back(VERTEX(cubeVerts[i1], faceColors[i]));
+            vertices.emplace_back(VERTEX(cubeVerts[i2], faceColors[i]));
+            vertices.emplace_back(VERTEX(cubeVerts[i3], faceColors[i]));
+        }        
 
         // Create vertex buffer.
         if (vertexCount > 0)
         {
             // Format = XYZ|RGB
-            const int vertexSize = 6 * sizeof(float);
-            const int vertexBufferSize = vertexCount * vertexSize;
+            const int vertexSize       = sizeof(VERTEX);
+            const int vertexBufferSize = vertices.size() * vertexSize;
 
             CD3DX12_HEAP_PROPERTIES uploadHeap(D3D12_HEAP_TYPE_UPLOAD);
             CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
@@ -976,7 +999,7 @@ void LoadScene()
             if (FAILED(hr))
                 OnError(L"Failed to map vertex buffer.");
 
-            memcpy(pVertexDataBegin, vertices, vertexBufferSize);
+            memcpy(pVertexDataBegin, vertices.data(), vertexBufferSize);
             g_vertexBuffer->Unmap(0, nullptr);
 
             // Initialize the vertex buffer view.
@@ -988,15 +1011,6 @@ void LoadScene()
         // Create index buffer.
         if (indexCount > 0)
         {
-            // Input data is right-handed, so we reverse the triangles here.
-            int* indicesLH = new int[indexCount];
-            for (int i = 0; i < indexCount; i += 3)
-            {
-                indicesLH[i]     = indices[i];
-                indicesLH[i + 1] = indices[i + 2];
-                indicesLH[i + 2] = indices[i + 1];
-            }
-        
             // Format = int
             const int indexSize = sizeof(unsigned int);
             const int indexBufferSize = indexCount * indexSize;
@@ -1027,15 +1041,13 @@ void LoadScene()
             if (FAILED(hr))
                 OnError(L"Failed to map index buffer.");
 
-            memcpy(pIndexDataBegin, indicesLH, indexBufferSize);
+            memcpy(pIndexDataBegin, indices.data(), indexBufferSize);
             g_indexBuffer->Unmap(0, nullptr);
 
             // Initialize the index buffer view.
             g_indexBufferView.BufferLocation = g_indexBuffer->GetGPUVirtualAddress();
             g_indexBufferView.SizeInBytes = indexBufferSize;
             g_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-
-            delete[] indicesLH;
         }
 
         const char* vertexShaderText = 
@@ -1072,8 +1084,10 @@ void LoadScene()
             "    return float4(input.Col, 1);\n"
             "};\n";
 
-
-        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+        UINT compileFlags = 0;
+#ifdef _DEBUG
+        compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
 
         // Compile the vertex shader
         ID3DBlob* pVSErrors = nullptr;
@@ -1293,7 +1307,7 @@ void LoadScene()
             // Prepare command-list.
             {
                 // Reset list.
-                hr = textureUploadCommandList->Reset(g_commandAllocator[g_frameIndex], NULL);
+                hr = g_textureUploadCommandList->Reset(g_commandAllocator[g_frameIndex], NULL);
                 if (FAILED(hr))
                     OnError(L"Failed to reset texture upload command-list");
             }
@@ -1305,39 +1319,22 @@ void LoadScene()
                 textureData.RowPitch   = width * 4;
                 textureData.SlicePitch = height * textureData.RowPitch;
 
-                UpdateSubresources(textureUploadCommandList, g_imageTexture, textureUploadHeap, 0, 0, 1, &textureData);
+                UpdateSubresources(g_textureUploadCommandList, g_imageTexture, textureUploadHeap, 0, 0, 1, &textureData);
 
-                //TransitionShaderResource(textureUploadCommandList);
+                //TransitionShaderResource(g_textureUploadCommandList);
 
-                TransitionResourceState(textureUploadCommandList, g_imageTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+                TransitionResourceState(g_textureUploadCommandList, g_imageTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
             }
 
             // Close command-list.
-            HRESULT hr = textureUploadCommandList->Close();
+            HRESULT hr = g_textureUploadCommandList->Close();
             if (FAILED(hr))
                 OnError(L"Failed to close texture upload command-list");
 
             // Execute command list.
-            ID3D12CommandList* ppCommandLists[] = { textureUploadCommandList };
+            ID3D12CommandList* ppCommandLists[] = { g_textureUploadCommandList };
             g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
         }
-        /*
-        // Create shader resource view.
-        {
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.Format                        = textureDesc.Format;
-            srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D.MostDetailedMip     = 0;
-            srvDesc.Texture2D.MipLevels           = 1;
-            srvDesc.Texture2D.PlaneSlice          = 0;
-            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-            g_imageShaderResourceView = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_srvHeap->GetCPUDescriptorHandleForHeapStart());
-            g_imageShaderResourceView.Offset(g_srvHeapUsed);
-            g_device->CreateShaderResourceView(g_imageTexture, &srvDesc, g_imageShaderResourceView);
-            g_srvHeapUsed += g_srvDescriptorSize;
-        }*/
     }
 
     // Wait for loading to complete.
@@ -1363,7 +1360,6 @@ void LoadScene()
         CloseHandle(loadSceneFenceEvent);
     }
 }
-
 
 void InitializeOffscreenFrameBuffer()
 {
@@ -1566,9 +1562,8 @@ void Render(float elapsedTime)
         // geometry transform.
         mat4f geometryTransform;
         {
-            // Place cube at convergence distance.
-            float convergenceDistance = g_sdk->GetConvergenceDistance();
-            vec3f geometryPos = vec3f(0, convergenceDistance, 0);
+            // Place cube at specified distance.
+            vec3f geometryPos = vec3f(0, g_geometryDist, 0);
 
             mat3f geometryOrientation;
             geometryOrientation.setIdentity();
@@ -1592,26 +1587,30 @@ void Render(float elapsedTime)
         {
             g_commandList->SetGraphicsRootConstantBufferView(0, g_constantBuffer[i]->GetGPUVirtualAddress());
 
-            // Get view offset.
-            const glm::vec3 viewOffset = g_interlacer->GetViewOffset(i);
+            // Get camera properties.
+            glm::vec3 camPos = glm::vec3(0, 0, 0);
+            glm::vec3 camDir = glm::vec3(0, 1, 0);
+            glm::vec3 camUp = glm::vec3(0, 0, 1);
 
-            // Get shear to apply to perspective projection.
-            const float convergenceDistance = g_sdk->GetConvergenceDistance();
-            const float shearX = -viewOffset.x / convergenceDistance;
-            const float shearY = -viewOffset.z / convergenceDistance;
-
-            // Create camera projection with shear.
+            // Compute view position and projection matrix for view.
+            vec3f viewPos = vec3f(0, 0, 0);
             mat4f cameraProjection;
-            cameraProjection.setPerspective(90.0f * (3.14159f / 180.0f), aspectRatio, 0.01f, 1000.0f);
-            cameraProjection[2][0] = cameraProjection[0][0] * shearX;
-            cameraProjection[2][1] = cameraProjection[1][1] * shearY;
-
-            // Get camera position (including offset from interlacer).
-            vec3f camPos = vec3f(0, 0, 0);
-            camPos += vec3f(viewOffset.x, viewOffset.z, viewOffset.y);
-
-            // Get camera direction.
-            vec3f camDir = vec3f(0, 1, 0);
+            if (g_perspective)
+            {
+                glm::mat4 viewProjMat;
+                glm::vec3 viewCamPos;
+                g_interlacer->GetConvergedPerspectiveViewInfo(i, camPos, camDir, camUp, g_perspectiveCameraFiledOfView, aspectRatio, 1.0f, 10000.0f, &viewCamPos, &viewProjMat);
+                cameraProjection = mat4f(viewProjMat);
+                viewPos = vec3f(viewCamPos);
+            }
+            else
+            {
+                glm::mat4 viewProjMat;
+                glm::vec3 viewCamPos;
+                g_interlacer->GetConvergedOrthographicViewInfo(i, camPos, camDir, camUp, g_orthographicCameraHeight * aspectRatio, g_orthographicCameraHeight, 1.0f, 10000.0f, &viewCamPos, &viewProjMat);
+                cameraProjection = mat4f(viewProjMat);
+                viewPos = vec3f(viewCamPos);
+            }
 
             // Get camera transform.
             mat4f cameraTransform;
@@ -1900,7 +1899,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     SAFE_RELEASE(g_fence);
     SAFE_RELEASE(g_dsvHeap);    
     SAFE_RELEASE(g_rtvHeap);    
-    SAFE_RELEASE(textureUploadCommandList);
+    SAFE_RELEASE(g_textureUploadCommandList);
     SAFE_RELEASE(g_guiCommandList);    
     SAFE_RELEASE(g_srvHeap);
     SAFE_RELEASE(g_swapChain);    

@@ -2,6 +2,8 @@
 #if USE_HLSL == 1
 
 #define uniform /**/
+#define highp /**/
+#define gv(x) x
 
 #define InTex input.Tex
 #define OutTexCoord output.TexCoord
@@ -9,6 +11,14 @@
 #define OutPos output.Pos 
 
 #else
+
+#if USE_GLSL_VULKAN
+#define gv(x) ubo.x
+#define LAYOUTLOC(x) layout(location = x)
+#else
+#define gv(x) x
+#define LAYOUTLOC(x) /**/
+#endif
 
 #define float2 vec2
 #define float3 vec3
@@ -44,10 +54,12 @@ struct PSInput
 
 #else
 
-layout(location = 0) in vec2 aTexCoord;
+LAYOUTLOC(0) in vec3 aPos;
+LAYOUTLOC(1) in vec3 aColor;
+LAYOUTLOC(2) in vec2 aTexCoord;
 
-out vec2 TexCoord;
-out vec2 ScreenTexCoord;
+LAYOUTLOC(0) out vec2 TexCoord;
+LAYOUTLOC(1) out vec2 ScreenTexCoord;
 
 #endif
 
@@ -55,40 +67,45 @@ out vec2 ScreenTexCoord;
 #if USE_HLSL == 1
 cbuffer LeiaInterlaceShaderConstantBufferData : register(b0)
 {
+#elif USE_GLSL_VULKAN == 1
+layout(binding = 0) uniform UniformBufferObject
+{
 #endif
+
+    //Must have 16 byte padding
     uniform float  hardwareViewsX;
     uniform float  hardwareViewsY;
     uniform float  viewResX;
     uniform float  viewResY;
 
-    uniform float  viewportX;
-    uniform float  viewportY;
-    uniform float  viewportWidth;
-    uniform float  viewportHeight;
+    uniform highp float  viewportX;
+    uniform highp float  viewportY;
+    uniform highp float  viewportWidth;
+    uniform highp float  viewportHeight;
 
     uniform float  minView;
     uniform float  maxView;
-    uniform float  n;
-    uniform float  d_over_n;
+    uniform highp float  n;
+    uniform highp float  d_over_n;
 
-    uniform float  p_over_du;
-    uniform float  p_over_dv;
+    uniform highp float  p_over_du;
+    uniform highp float  p_over_dv;
     uniform float  colorSlant;
     uniform float  colorInversion;
 
-    uniform float  faceX;
-    uniform float  faceY;
-    uniform float  faceZ;
-    uniform float  pixelPitch;
+    uniform highp float  faceX;
+    uniform highp float  faceY;
+    uniform highp float  faceZ;
+    uniform highp float  pixelPitch;
 
-    uniform float  du;
-    uniform float  dv;
-    uniform float  s;
-    uniform float  cos_theta;
+    uniform highp float  du;
+    uniform highp float  dv;
+    uniform highp float  s;
+    uniform highp float  cos_theta;
 
-    uniform float  sin_theta;
-    uniform float  peelOffset;
-    uniform float  No;
+    uniform highp float  sin_theta;
+    uniform highp float  peelOffset;
+    uniform highp float  No;
     uniform float  displayResX;
 
     uniform float  displayResY;
@@ -101,16 +118,31 @@ cbuffer LeiaInterlaceShaderConstantBufferData : register(b0)
     uniform float  reconvergenceAmount;
     uniform float  softwareViews;
 
-    uniform float  absReconvergenceAmount;
-    uniform float  padding0;
+    uniform highp float  absReconvergenceAmount;
+    uniform highp float  alpha;
     uniform float  padding1;
     uniform float  padding2;
 
-    uniform float4x4 textureTransform;
+    uniform highp float4x4 textureTransform;
 
-    uniform float4x4 rectTransform;
+    uniform highp float4x4 rectTransform;
+
+    uniform highp float customTextureScaleX;
+    uniform highp float customTextureScaleY;
+    uniform highp float reconvergenceZoomX;
+    uniform highp float reconvergenceZoomY;
+
+#if  SP_ACT == 1
+    uniform float ACT_gamma;
+    uniform float ACT_invGamma;
+    uniform float ACT_singletap_coef;
+    uniform float ACT_norm;
+#endif
+
 #if USE_HLSL == 1
 };
+#elif USE_GLSL_VULKAN == 1
+} ubo;
 #endif
 
 #if USE_HLSL == 1
@@ -124,10 +156,10 @@ void main()
 #endif
 
     // Scale and offset texture coordinates.
-    OutTexCoord = mul(textureTransform, float4(InTex, 0.0, 1.0)).xy;
+    OutTexCoord = mul(gv(textureTransform), float4(InTex, 0.0, 1.0)).xy;
 
     // Scale of offset position of rectangle being rendered.
-    OutScreenTexCoord = mul(rectTransform, float4(InTex, 0.0, 1.0)).xy;
+    OutScreenTexCoord = mul(gv(rectTransform), float4(InTex, 0.0, 1.0)).xy;
 
     // Scale and offset position.
     OutPos = float4((OutScreenTexCoord * 2.0) - 1.0, 0.0, 1.0);

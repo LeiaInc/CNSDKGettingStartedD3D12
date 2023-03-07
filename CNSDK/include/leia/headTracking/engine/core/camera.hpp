@@ -7,9 +7,11 @@
 #include <memory>
 #include <functional>
 
-namespace leia { struct CameraIntrinsics; }
+namespace leia {
 
-namespace leia::head {
+struct CameraIntrinsics;
+
+namespace head {
 
 /// CameraFrame stores single-frame data.
 /// It may be a stereo frame (ImageDescs().length == 2) or mono frame.
@@ -47,6 +49,10 @@ struct CameraConfiguration {
     float binningFactor = 0.0f;
 };
 
+struct CameraCaptureConfiguration {
+    bool enableLux = false;
+};
+
 using CameraFrameCallback = std::function<void(std::unique_ptr<CameraFrame>)>;
 
 /// Provides CameraFrame using either polling mechanism (Camera::WaitForFrame) or event-based (Camera::Listener)
@@ -60,13 +66,18 @@ public:
         virtual void OnCameraIntrinsicsChange(Camera*, CameraIntrinsics const&) = 0;
     };
 
-    virtual void StartCapture() = 0;
+    virtual void StartCapture(CameraCaptureConfiguration const&) = 0;
 
     virtual void StopCapture() = 0;
 
     virtual int GetFps() const = 0;
     virtual bool SetFps(int fps) = 0;
     virtual Slice<const int> GetSupportedFps() const = 0;
+
+    virtual float GetLux() const = 0;
 };
 
-} // namespace leia::head
+const float kInvalidLux = 0.0f;
+
+} // namespace head
+} // namespace leia

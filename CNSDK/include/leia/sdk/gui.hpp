@@ -16,7 +16,8 @@
 struct AInputEvent;
 struct ImGuiContext;
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 #if defined(LEIA_OS_WINDOWS)
 using GuiSurface = HWND;
@@ -28,7 +29,8 @@ enum class GuiGraphicsAPI
 {
     OpenGL,
     D3D11,
-    D3D12
+    D3D12,
+    Vulkan
 };
 
 struct GuiInitArgs {
@@ -44,6 +46,20 @@ struct GuiInitArgs {
     uint64_t   d3d12FontSrvGpuDescHandle = 0;
     void*      d3d12CommandList = nullptr;
     GuiGraphicsAPI graphicsAPI = GuiGraphicsAPI::OpenGL;
+    void*    vulkanDevice         = nullptr;
+    void*    vulkanDescriptorPool = nullptr;
+    uint32_t vulkanImageCount     = 0;
+    void*    vulkanInstance       = nullptr;
+    uint32_t vulkanMinImageCount  = 0;
+    int      vulkanMSAASamples    = 0;
+    void*    vulkanPhysicalDevice = nullptr;
+    void*    vulkanPipelineCache  = nullptr;
+    void*    vulkanQueue          = nullptr;
+    uint32_t vulkanQueueFamily    = 0;
+    uint32_t vulkanSubpass        = 0;
+    void*    vulkanRenderPass     = nullptr;
+    void*    vulkanCommandBuffer  = nullptr;
+    void*    vulkanCommandPool    = nullptr;
 };
 
 class Gui {
@@ -82,7 +98,9 @@ private:
     ImGuiContext* _imGuiContext;
     std::thread::id _owningThreadId;
     void* _d3d12CommandList = nullptr;
+    void* _vulkanCommandBuffer = nullptr;
     GuiGraphicsAPI graphicsAPI = GuiGraphicsAPI::OpenGL;
 };
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

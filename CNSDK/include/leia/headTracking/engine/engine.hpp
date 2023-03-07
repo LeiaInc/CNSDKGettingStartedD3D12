@@ -21,21 +21,45 @@ struct SharedCameraSink;
 namespace device { class SensorManager; }
 #endif
 
-} // namespace leia
-
-namespace leia::head {
+namespace head {
 
 struct BlinkDetectorConfiguration;
 class AndroidCameraSinkGPU;
 class AndroidCameraSinkCPU;
 class FrameAdapter;
 
+struct LightFilterConfiguration {
+    bool enable = false;
+    // Cut off threshold disables the face detector if ambient light is lower than the threshold.
+    float cutoffLux = 500;
+    // Check threshold defines the range in which faces should be constantly detected to output them in API.
+    // It handles the transition from too low light (cut off), when no face is detected,
+    // to enough light, when lighting conditions guarantee face detection.
+    // In this range, it's expected for the face detector to detect a face unreliably.
+    // So instead of outputting a flickering signal, we output it only if it's stable.
+    float checkLux = 550;
+    // Number of frames for which face must be detected to treat the signal as stable.
+    int checkNumFrames = 90;
+};
+
+class LightFilter {
+public:
+    void SetConfiguration(LightFilterConfiguration);
+    LightFilterConfiguration GetConfiguration() const { return _config; }
+
+    bool ShouldDetectFaces(float lux);
+    bool ShouldDropFaces(float lux, FaceDetector::Output const&);
+
+private:
+    LightFilterConfiguration _config;
+    int _checkFramesCounter = 0;
+};
+
 struct EngineConfiguration {
     FaceTracker::Configuration faceTracker;
     FaceDetectorConfiguration faceDetector;
     CameraConfiguration camera;
 
-    bool initializeFaceDetectorLazily;
     bool enableProfiling;
 
     LHT_ENGINE_API
@@ -123,6 +147,8 @@ public:
 
     LHT_ENGINE_API
     void SetTrackedEyes(bool left, bool right);
+    LHT_ENGINE_API
+    void SetSingleFaceConfig(SingleFaceConfiguration const&);
 
     /// Configures camera transform using Leia Display Config values.
     /// Can be overriden using SetCameraPosition, SetCameraRotation.
@@ -144,13 +170,9 @@ public:
     void SetMaxNumOfDetectedFaces(int);
 
     LHT_ENGINE_API
-    bool SetFaceDetectorBackend(FaceDetectorBackend);
+    bool SetFaceDetectorConfig(FaceDetectorConfig);
     LHT_ENGINE_API
-    FaceDetectorBackend GetFaceDetectorBackend() const;
-    LHT_ENGINE_API
-    bool SetFaceDetectorInputType(FaceDetectorInputType);
-    LHT_ENGINE_API
-    FaceDetectorInputType GetFaceDetectorInputType() const;
+    FaceDetectorConfig GetFaceDetectorConfig() const;
 
     LHT_ENGINE_API
     Slice<const int> GetSupportedCameraFps() const;
@@ -161,6 +183,18 @@ public:
 
     LHT_ENGINE_API
     void SetProfiling(bool enable);
+
+    LHT_ENGINE_API
+    float GetLux() const;
+    LHT_ENGINE_API
+    LightFilterConfiguration GetLightFilterConfiguration() const;
+    LHT_ENGINE_API
+    void SetLightFilterConfiguration(LightFilterConfiguration);
+
+    LHT_ENGINE_API
+    void SetHeadPoseZLowPassFilterAlpha(float alpha);
+    LHT_ENGINE_API
+    float GetHeadPoseZLowPassFilterAlpha() const;
 
 private:
     enum ChangeTracker {
@@ -178,8 +212,9 @@ private:
     void UpdateCameraSink();
 
     void CreateCamera();
+    void StartCameraCapture();
 
-    void ProcessFrame(CameraFrame const& cameraFrame);
+    void ProcessFrame(Camera*, CameraFrame const& cameraFrame);
 
     void CreateFaceDetector();
 
@@ -196,6 +231,9 @@ private:
 
     VirtualFaceHook _virtualFaceHook;
     std::vector<VirtualFace> _virtualFacesBuffer;
+
+    LightFilter _lightFilter;
+    FaceDetector::Output _emptyFaceDetectorOutput;
 
     CameraIntrinsics _cameraIntrinsics;
 
@@ -236,4 +274,5 @@ bool IsCameraConnected();
 LHT_ENGINE_API
 uint32_t GetSupportedFaceDetectorBackends();
 
-} // namespace leia::head
+} // namespace head
+} // namespace leia

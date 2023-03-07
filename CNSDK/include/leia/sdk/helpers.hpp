@@ -3,6 +3,7 @@
 #include "leia/sdk/api.h"
 #include "leia/sdk/enums.hpp"
 #include "leia/common/log.h"
+#include "leia/common/utils.hpp"
 #include "leia/common/jniTypes.h"
 #include "leia/headTracking/service/common.hpp"
 #include "leia/headTracking/common/frameAdapter.hpp"
@@ -17,11 +18,12 @@ namespace leia {
 
 } // namespace leia
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 class ILeiaSDK;
 
-struct Delegate
+struct LEIASDK_CLASS_API Delegate
 {
 	LEIASDK_API
 	virtual void DidInitialize(ILeiaSDK*);
@@ -29,7 +31,7 @@ struct Delegate
 	virtual void OnFaceTrackingFatalError(ILeiaSDK*);
 };
 
-class InterlacerDelegate
+class LEIASDK_CLASS_API InterlacerDelegate
 {
 public:
 	LEIASDK_API
@@ -65,12 +67,19 @@ LEIASDK_API
 const char* ToUiStr(eLeiaShaderDebugMode mode);
 
 template <typename Enum>
-auto ToIntegral(Enum e) {
+std::underlying_type_t<Enum> ToIntegral(Enum e) {
 	return static_cast<std::underlying_type_t<Enum>>(e);
 }
 
 template <typename Enum, typename Int>
-std::enable_if_t<std::is_same_v<std::underlying_type_t<Enum>, Int>, Enum>
+typename
+std::enable_if<
+	std::is_same<
+		std::underlying_type_t<Enum>,
+		Int
+	>::value,
+	Enum
+>::type
 FromIntegral(Int i) {
 	return static_cast<Enum>(i);
 }
@@ -108,4 +117,5 @@ struct RollingAverage {
 	}
 };
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

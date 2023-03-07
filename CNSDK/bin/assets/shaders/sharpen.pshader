@@ -2,10 +2,21 @@
 #if USE_HLSL == 1
 
 #define uniform /**/
+#define gv(x) x
 
 #define InTexCoord input.Tex
 
 #else
+
+#if USE_GLSL_VULKAN
+#define gv(x) ubo.x
+#define LAYOUTLOC(x) layout(location = x)
+#define LAYOUTBIND(x) layout(binding = x)
+#else
+#define gv(x) x
+#define LAYOUTLOC(x) /**/
+#define LAYOUTBIND(x) /**/
+#endif
 
 #define float2 vec2
 #define float3 vec3
@@ -38,9 +49,8 @@ struct PSInput
 
 precision mediump float;
 
-in vec2 TexCoord;
-
-out vec4 FragColor;
+LAYOUTLOC(0) in vec2 TexCoord;
+LAYOUTLOC(0) out vec4 FragColor;
 
 #endif
 
@@ -52,13 +62,16 @@ SamplerState viewSampler : register(s0);
 
 #else
 
-uniform sampler2D viewTexture;
+LAYOUTBIND(1) uniform sampler2D viewTexture;
 
 #endif
 
 // Global variables (uniforms for GLSL and constant buffer for HLSL)
 #if USE_HLSL == 1
 cbuffer LeiaSharpenShaderConstantBufferData : register(b0)
+{
+#elif USE_GLSL_VULKAN == 1
+LAYOUTBIND(0) uniform UniformBufferObject
 {
 #endif
 
@@ -77,16 +90,18 @@ cbuffer LeiaSharpenShaderConstantBufferData : register(b0)
 
 #if USE_HLSL == 1
 };
+#elif USE_GLSL_VULKAN == 1
+} ubo;
 #endif
 
 float3 GammaToLinear(float3 col)
 {
-    return float3(pow(col.x, gamma), pow(col.y, gamma), pow(col.z, gamma));
+    return float3(pow(col.x, gv(gamma)), pow(col.y, gv(gamma)), pow(col.z, gv(gamma)));
 }
 
 float3 LinearToGamma(float3 col)
 {
-    float invGamma = 1.0 / gamma; // todo: pass-in invGamma instead of computing per-pixel.
+    float invGamma = 1.0 / gv(gamma); // todo: pass-in invGamma instead of computing per-pixel.
     return float3(pow(col.x, invGamma), pow(col.y, invGamma), pow(col.z, invGamma));
 }
 
@@ -106,31 +121,31 @@ void main()
 #endif
 {
     float4 final_color = float4(0.0, 0.0, 0.0, 1.0);
-    final_color.rgb = sharpeningCenter * GammaToLinear(sampleTexture(InTexCoord).rgb);
+    final_color.rgb = gv(sharpeningCenter) * GammaToLinear(sampleTexture(InTexCoord).rgb);
 
 #if ACT_OPTIMIZED
     float coef_sum = 0.0;
-    for (int index = 0; index < sharpeningValueCount/2; index++)
+    for (int index = 0; index < gv(sharpeningValueCount)/2; index++)
     {
-        coef_sum += sharpeningValues[2*index].z; // calculating sum of all coefs
+        coef_sum += gv(sharpeningValues)[2*index].z; // calculating sum of all coefs
     }
-    float2 uv1 = InTexCoord + sharpeningValues[4].xy * textureInvSize.xy; // tapping at order +3
+    float2 uv1 = InTexCoord + gv(sharpeningValues)[4].xy * gv(textureInvSize).xy; // tapping at order +3
     final_color.rgb -= coef_sum * GammaToLinear(sampleTexture(uv1).rgb);
-    float2 uv2 = InTexCoord + sharpeningValues[5].xy * textureInvSize.xy; // tapping at order -3
+    float2 uv2 = InTexCoord + gv(sharpeningValues)[5].xy * gv(textureInvSize).xy; // tapping at order -3
     final_color.rgb -= coef_sum * GammaToLinear(sampleTexture(uv2).rgb);
     // NOTE: need to guard against case where we have less than 3 ACT coefs, which happens if numViews < 6 
     // NOTE: for numViews == 6 we only need to tap once with twice the coef
 #else
-    for (int index = 0; index < sharpeningValueCount; index++)
+    for (int index = 0; index < gv(sharpeningValueCount); index++)
     {
-        float2 uv = InTexCoord + sharpeningValues[index].xy * textureInvSize.xy;
-        final_color.rgb -= sharpeningValues[index].z * GammaToLinear(sampleTexture(uv).rgb);
+        float2 uv = InTexCoord + gv(sharpeningValues)[index].xy * gv(textureInvSize).xy;
+        final_color.rgb -= gv(sharpeningValues)[index].z * GammaToLinear(sampleTexture(uv).rgb);
     }
 #endif
 
     final_color.rgb = clamp(final_color.rgb, 0.0, 1.0);
     final_color.rgb = LinearToGamma(final_color.rgb);
-    final_color.a = alpha;
+    final_color.a = gv(alpha);
     
     //Uncomment to do a passthrough.
     //final_color = sampleTexture(InTexCoord);

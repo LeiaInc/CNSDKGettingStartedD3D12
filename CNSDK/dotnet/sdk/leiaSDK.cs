@@ -53,6 +53,11 @@ namespace Leia
         public float facePredictBeta;
         public float facePredictLatencyMs;
         public float accelerationThreshold;
+        public Int32 faceTrackingSingleFaceEnable;
+        public float faceTrackingSingleFaceTooFarDistanceThreshold;
+        public Int32 faceTrackingSingleFaceTooFarResetTimeoutMs;
+        public Int32 faceTrackingMaxNumOfFaces;
+        public float faceTrackingHeadPoseZLowPassAlpha;
     }
     public class SDK : IDisposable
     {
@@ -80,19 +85,26 @@ namespace Leia
         {
             return leiaSdkSetConfig(_sdk, in config);
         }
+        public Status SetBacklight(bool enable)
+        {
+            return (Status)leiaSdkSetBacklight(_sdk, enable ? 1 : 0);
+        }
+        public Status GetBacklight(out bool isEnabled)
+        {
+            Int32 isEnabledInt = 0;
+            Status status = (Status)leiaSdkGetBacklight(_sdk, out isEnabledInt);
+            isEnabled = isEnabledInt != 0;
+            return status;
+        }
         public enum Status
         {
             Success = 0,
             ErrorInvalidInstance,
             ErrorUnknown,
         }
-        public Status SetFaceTrackingBackend(FaceDetectorBackend backend)
+        public Status SetFaceTrackingConfig(FaceDetectorConfig config)
         {
-            return (Status)leiaSdkSetFaceTrackingBackend(_sdk, backend);
-        }
-        public Status SetFaceTrackingInputType(FaceDetectorInputType inputType)
-        {
-            return (Status)leiaSdkSetFaceTrackingInputType(_sdk, inputType);
+            return (Status)leiaSdkSetFaceTrackingConfig(_sdk, config);
         }
         public Status EnableFacetracking(bool enable)
         {
@@ -132,9 +144,7 @@ namespace Leia
         [DllImport("leiaSDK")]
         private static extern IntPtr leiaSdkCreate(LogLevel logLevel);
         [DllImport("leiaSDK")]
-        private static extern Int32 leiaSdkSetFaceTrackingBackend(IntPtr sdk, FaceDetectorBackend backend);
-        [DllImport("leiaSDK")]
-        private static extern Int32 leiaSdkSetFaceTrackingInputType(IntPtr sdk, FaceDetectorInputType inputType);
+        private static extern Int32 leiaSdkSetFaceTrackingConfig(IntPtr sdk, FaceDetectorConfig config);
         [DllImport("leiaSDK")]
         private static extern Int32 leiaSdkEnableFacetracking(IntPtr sdk, Int32 enable);
         [DllImport("leiaSDK")]
@@ -147,6 +157,10 @@ namespace Leia
         private static extern Int32 leiaSdkGetPrimaryFace(IntPtr sdk, out Vector3 position);
         [DllImport("leiaSDK")]
         private static extern Int32 leiaSdkGetNonPredictedPrimaryFace(IntPtr sdk, out Vector3 position);
+        [DllImport("leiaSDK")]
+        private static extern Int32 leiaSdkSetBacklight(IntPtr sdk, Int32 enable);
+        [DllImport("leiaSDK")]
+        private static extern Int32 leiaSdkGetBacklight(IntPtr sdk, out Int32 isEnabled);
         [DllImport("leiaSDK")]
         private static extern Int32 leiaSdkGetConfig(IntPtr sdk, out Config config);
         [DllImport("leiaSDK")]

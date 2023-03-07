@@ -52,8 +52,9 @@ namespace LeiaHeadTracking
 
         [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = Constants.kNumEyes)]
         public Eye[] eyes;
-        Leia.Vector3 posePosition;
-        Leia.Vector3 poseAngle;
+        public Leia.Vector3 posePosition;
+        public Leia.Vector3 poseAngle;
+        public UInt32 id;
     }
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct Result

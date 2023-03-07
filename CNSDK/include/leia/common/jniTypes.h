@@ -1,8 +1,10 @@
 #pragma once
 
-#include "leia/common/config.h"
+#include "leia/common/defines.h"
 
-#ifdef LNK_HAS_JNI
+#include <stdint.h>
+
+#if defined(LEIA_OS_ANDROID)
 #include <jni.h>
 #else
 class _jobject {};
@@ -11,4 +13,5 @@ struct _JavaVM;
 using JavaVM = _JavaVM;
 struct _JNIEnv;
 using JNIEnv = _JNIEnv;
-#endif // LNK_HAS_JNI
+using jint = int32_t;
+#endif // LEIA_OS_ANDROID

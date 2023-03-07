@@ -7,26 +7,29 @@
 #include <functional>
 #include <memory>
 
-namespace leia::head { class FrameAdapter; }
+namespace leia {
+namespace head {
 
-namespace leia::head::service {
+class FrameAdapter;
+
+namespace service {
 
 struct ClientListener {
     virtual void OnConnect(ServerInfo const&) = 0;
-    virtual void OnFaceDetectorBackendUpdate(FaceDetectorBackend) = 0;
-    virtual void OnFaceDetectorInputTypeUpdate(FaceDetectorInputType) = 0;
     virtual void OnDisconnect() = 0;
     virtual void OnError(ServiceSpecificError error, std::string const& message) = 0;
+    virtual void OnFaceDetectorConfigUpdate(FaceDetectorConfig) = 0;
 };
 
 struct ClientInitArgs {
     FrameAdapter* frameAdapter = nullptr;
     Platform* platform = nullptr;
+    JNIEnv* jniEnv = nullptr;
 
     ClientListener* listener = nullptr;
     TrackingStateListener* trackingStateListener = nullptr;
 
-    ServerInitArgs server;
+    ClientServerInitArgs server;
 };
 
 class Client {
@@ -42,20 +45,21 @@ public:
     void StopTracking();
 
     LHT_SERVICE_API
-    void SetFaceDetectorBackend(FaceDetectorBackend);
-    LHT_SERVICE_API
-    void SetFaceDetectorInputType(FaceDetectorInputType);
+    void SetFaceDetectorConfig(FaceDetectorConfig);
     LHT_SERVICE_API
     void SetServerLogLevel(leia_log_level);
     LHT_SERVICE_API
     void SetProfiling(bool enable);
-
-private:
-    void InitServerConnection(ClientInitArgs const&);
+    LHT_SERVICE_API
+    void SetMaxNumOfDetectedFaces(int);
+    LHT_SERVICE_API
+    void SetSingleFaceConfig(SingleFaceConfiguration const&);
 
 private:
     struct Impl;
     std::unique_ptr<Impl> _impl;
 };
 
-} // namespace leia::head::service
+} // namespace service
+} // namespace head
+} // namespace leia

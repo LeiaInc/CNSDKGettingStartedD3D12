@@ -5,7 +5,8 @@
 
 #include <functional>
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 class LeiaSDK;
 
@@ -49,4 +50,5 @@ private:
 	RollingAverage mBlinkProcessingTime;
 };
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

@@ -2,10 +2,8 @@
 
 #include "leia/sdk/api.h"
 
-#if defined(LEIA_OS_WINDOWS)
-#include "leia/common/windows/windowsPlatform.hpp"
-#elif defined(LEIA_OS_ANDROID)
-#include "leia/common/android/androidPlatform.hpp"
+#if defined(LEIA_OS_ANDROID)
+#include "leia/common/jniTypes.h"
 #endif
 
 #include <functional>
@@ -13,9 +11,12 @@
 
 struct leia_sdk_image_desc;
 
-namespace leia { class Platform; class AssetManager; }
+namespace leia {
 
-namespace leia::sdk {
+class Platform;
+class AssetManager;
+
+namespace sdk {
 
 class MLImage;
 struct LeiaMediaSdkPlugin;
@@ -27,8 +28,8 @@ public:
 
     using TiledImageCallback = std::function<void(std::unique_ptr<MLImage> albedo, std::unique_ptr<MLImage> disparity)>;
 
-    virtual bool ConvertSync(fs::path const& singleImagePath, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
-    virtual void ConvertAsync(fs::path const& singleImagePath, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
+    virtual bool ConvertSync(std::string const& singleImagePath, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
+    virtual void ConvertAsync(std::string const& singleImagePath, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
 
     virtual bool ConvertSync(leia_sdk_image_desc const& singleImage, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
     virtual void ConvertAsync(std::shared_ptr<MLImage> const& singleImage, MLMultiviewConfiguration const&, TiledImageCallback const&) = 0;
@@ -58,4 +59,5 @@ struct MLMultiviewConfiguration {
 
 std::unique_ptr<ML> CreateML(Platform*, AssetManager*);
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

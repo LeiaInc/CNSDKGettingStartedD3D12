@@ -34,7 +34,9 @@
         // Default constructor
         vec3f() = default;
 
+
         // Constructors
+                 vec3f (glm::vec3 v) : x(v.x), y(v.y), z(v.z) {}
         explicit vec3f (float xyz) : x(xyz), y(xyz), z(xyz) {}
         explicit vec3f (float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
         explicit vec3f (const vec2f& xy, float _z) : x(xy.x), y(xy.y), z(_z) {}
@@ -390,15 +392,12 @@
             Wx = _Wx; Wy = _Wy; Wz = _Wz; Ww = _Ww;
         }
 
-        /*explicit mat4f(const mat4& mat)
-        {
-            Xx = (float) mat.Xx; Xy = (float) mat.Xy; Xz = (float) mat.Xz; Xw = (float) mat.Xw;
-            Yx = (float) mat.Yx; Yy = (float) mat.Yy; Yz = (float) mat.Yz; Yw = (float) mat.Yw;
-            Zx = (float) mat.Zx; Zy = (float) mat.Zy; Zz = (float) mat.Zz; Zw = (float) mat.Zw;
-            Wx = (float) mat.Wx; Wy = (float) mat.Wy; Wz = (float) mat.Wz; Ww = (float) mat.Ww;
-        }*/
+        mat4f(const glm::mat4& m) : Xx(m[0].x), Xy(m[0].y), Xz(m[0].z), Xw(m[0].w),
+                                    Yx(m[1].x), Yy(m[1].y), Yz(m[1].z), Yw(m[1].w),
+                                    Zx(m[2].x), Zy(m[2].y), Zz(m[2].z), Zw(m[2].w),
+                                    Wx(m[3].x), Wy(m[3].y), Wz(m[3].z), Ww(m[3].w) {}
 
-        vec4f  operator[](int index) const { return e[index]; }
+         vec4f  operator[](int index) const { return e[index]; }
         vec4f& operator[](int index)       { return e[index]; }
 
         void setIdentity()
@@ -440,6 +439,21 @@
             y = vec4f(0.0f, Ys,   0.0f, 0.0f);
             z = vec4f(0.0f, 0.0f, Zs,  -1.0f);
             w = vec4f(0.0f, 0.0f, Us,   0.0f);
+        }
+
+        void setOrthographic(float left, float right, float bottom, float top, float znear, float zfar)
+        {
+            const float Xs = 2.0f / (right - left);
+            const float Ys = 2.0f / (top - bottom);
+            const float Zs = -2.0f / (zfar - znear);
+            const float tx = -(right + left) / (right - left);
+            const float ty = -(top + bottom) / (top - bottom);
+            const float tz = -(zfar + znear) / (zfar - znear);
+
+            x = vec4f(Xs,   0.0f, 0.0f, 0.0f);
+            y = vec4f(0.0f, Ys,   0.0f, 0.0f);
+            z = vec4f(0.0f, 0.0f, Zs,   0.0f);
+            w = vec4f(tx,   ty,   tx,   1.0f);
         }
 
         void lookAt(const vec3f& eye, const vec3f& center, const vec3f& up)

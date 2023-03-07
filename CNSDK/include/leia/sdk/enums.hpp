@@ -2,7 +2,8 @@
 
 #include <cstdint>
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 enum class eLeiaInterlaceMode : int32_t
 {
@@ -61,4 +62,5 @@ enum class eBufferType
 	InterlacedResult
 };
 
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

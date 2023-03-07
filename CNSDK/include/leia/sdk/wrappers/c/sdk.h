@@ -52,6 +52,11 @@ struct leia_config
     float facePredictBeta;
     float facePredictLatencyMs;
     float accelerationThreshold;
+    int   faceTrackingSingleFaceEnable;
+    float faceTrackingSingleFaceTooFarDistanceThreshold;
+    int   faceTrackingSingleFaceTooFarResetTimeoutMs;
+    int   faceTrackingMaxNumOfFaces;
+    float faceTrackingHeadPoseZLowPassAlpha;
 };
 
 #pragma pack(pop)
@@ -69,10 +74,7 @@ LEIASDK_API
 leia_sdk leiaSdkCreate(leia_log_level);
 
 LEIASDK_API
-leia_sdk_status leiaSdkSetFaceTrackingBackend(leia_sdk, leia_face_detector_backend);
-
-LEIASDK_API
-leia_sdk_status leiaSdkSetFaceTrackingInputType(leia_sdk, leia_face_detector_input_type);
+leia_sdk_status leiaSdkSetFaceTrackingConfig(leia_sdk, leia_face_detector_config);
 
 LEIASDK_API
 leia_sdk_status leiaSdkEnableFacetracking(leia_sdk, leia_bool enable);
@@ -100,6 +102,12 @@ int leiaSdkGetConfig(leia_sdk, leia_config*);
 
 LEIASDK_API
 int leiaSdkSetConfig(leia_sdk, leia_config const* config);
+
+LEIASDK_API
+leia_sdk_status leiaSdkSetBacklight(leia_sdk, leia_bool enable);
+
+LEIASDK_API
+leia_sdk_status leiaSdkGetBacklight(leia_sdk, leia_bool* isEnabled);
 
 LEIASDK_API
 leia_sdk_status leiaSdkResume(leia_sdk);

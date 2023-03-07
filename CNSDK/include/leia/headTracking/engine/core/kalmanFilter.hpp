@@ -5,7 +5,8 @@
 
 #include <glm/glm.hpp>
 
-namespace leia::head {
+namespace leia {
+namespace head {
 
 struct KalmanCoeffs {
     glm::vec3 a = glm::vec3(0.02f, 0.05f, 0.2f);
@@ -42,4 +43,5 @@ private:
     MovingPoint _point;
 };
 
-} // namespace leia::head
+} // namespace head
+} // namespace leia

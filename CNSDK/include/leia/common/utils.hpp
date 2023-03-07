@@ -4,6 +4,9 @@
 
 #include <fstream>
 #include <vector>
+#include <version>
+
+#include <thread>
 
 #ifdef __ANDROID__
 struct AAssetManager;
@@ -65,16 +68,18 @@ namespace leia {
 // Explicitly stop compiler from producing unused argument or variable warnings.
 #define LNK_UNUSED(value) (void)value
 
+void ThrowIncorrectThreadException(std::thread::id expectedId, const char* func);
+
 #define LNK_CHECK_THREAD_ID(expectedId) \
 if (expectedId != std::this_thread::get_id()) { \
-	THROW_EXCEPTION(fmt::format("{} being used on incorrect thread.", LNK_PRETTY_FUNCTION)); \
+	ThrowIncorrectThreadException(expectedId, LNK_PRETTY_FUNCTION); \
 }
 
 #define LNK_CHECK_THREAD_ID_NOTHROW(expectedId) \
 if (expectedId != std::this_thread::get_id()) { \
 	spdlog::critical("{} being used on incorrect thread.", LNK_PRETTY_FUNCTION); \
 }
-
+#ifdef __cpp_return_type_deduction
 template <typename T, typename DeleteFunc>
 auto WrapResource(T* resource, DeleteFunc deleteFunc) {
     return std::unique_ptr<T, DeleteFunc>(resource, deleteFunc);
@@ -86,6 +91,7 @@ auto WrapResource(DeleteFunc deleteFunc, InitFunc initFunc) {
     initFunc(&resource);
     return std::unique_ptr<T, DeleteFunc>(resource, deleteFunc);
 }
+#endif
 
 template <typename T, typename U>
 T* polymorphic_pointer_downcast(U* p) {
@@ -128,7 +134,11 @@ struct Version {
 	Version(int major, int minor);
 };
 
+#ifdef __cpp_lib_string_view
 bool ParseVersion(std::string_view const&, Version*);
+#else
+bool ParseVersion(std::string const&, Version*);
+#endif
 
 bool operator<(Version const&, Version const&);
 bool operator<=(Version const&, Version const&);
@@ -136,3 +146,12 @@ bool operator>(Version const&, Version const&);
 bool operator>=(Version const&, Version const&);
 
 } // namespace leia
+
+namespace std {
+
+#ifndef __cpp_lib_transformation_trait_aliases
+template< class T >
+using underlying_type_t = typename underlying_type<T>::type;
+#endif
+
+} // namespace std

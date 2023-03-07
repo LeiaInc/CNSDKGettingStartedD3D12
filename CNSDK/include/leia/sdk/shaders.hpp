@@ -6,7 +6,8 @@
 #include <glm/glm.hpp>
 
 
-namespace leia::sdk {
+namespace leia {
+namespace sdk {
 
 
 	struct LeiaInterlaceParameters
@@ -65,6 +66,8 @@ namespace leia::sdk {
 		glm::vec4  textureInvSize = glm::vec4(0, 0, 0, 0);
 		glm::vec4  sharpeningValues[18] = { glm::vec4(0,0,0,0), glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0),glm::vec4(0,0,0,0) };
 
+		float actNormalized = 0.0f;
+
 		void debugLog();
 	};
 
@@ -94,6 +97,8 @@ namespace leia::sdk {
 		ISP_SINGLE_VIEW_MODE,
         ISP_USE_HLSL,
 		ISP_MEDIUM_PRECISION,
+		ISP_SINGLE_PASS_ACT,
+        ISP_USE_GLSL_VULKAN,
 
 		//Keep all new permutations above this line
 		ISP_TOTAL,
@@ -103,6 +108,7 @@ namespace leia::sdk {
     {
         SSP_UV_TOP = 0,
         SSP_USE_HLSL,
+        SSP_USE_GLSL_VULKAN,
 
         //Keep all new permutations above this line
         SSP_TOTAL,
@@ -132,19 +138,18 @@ namespace leia::sdk {
 		leia::opengl::Shader::PermutationDefinition(2,	"#define HORIZONTAL_SOURCE_VIEWS %d\n"),
 		leia::opengl::Shader::PermutationDefinition(2,	"#define SINGLE_VIEW_MODE %d\n"),
         leia::opengl::Shader::PermutationDefinition(2,	"#define USE_HLSL %d\n"),
-		leia::opengl::Shader::PermutationDefinition(2,	"#define MEDIUM_P %d\n")
-	};
+		leia::opengl::Shader::PermutationDefinition(2,	"#define MEDIUM_P %d\n"),
+        leia::opengl::Shader::PermutationDefinition(2,	"#define SP_ACT %d\n"),
+        leia::opengl::Shader::PermutationDefinition(2,	"#define USE_GLSL_VULKAN %d\n")
 
-	//if you hit this assert, you added the enum but did not add it to the array above
-	static_assert( sizeof(sInterlaceShaderPermutations) == ISP_TOTAL * sizeof(leia::opengl::Shader::PermutationDefinition));
+	};
 
     static const leia::opengl::Shader::PermutationDefinition sSharpenShaderPermutations[] =
     {
         leia::opengl::Shader::PermutationDefinition(2, "#define UV_TOP_LEFT %d\n"),
-        leia::opengl::Shader::PermutationDefinition(2, "#define USE_HLSL %d\n")
+        leia::opengl::Shader::PermutationDefinition(2, "#define USE_HLSL %d\n"),
+        leia::opengl::Shader::PermutationDefinition(2, "#define USE_GLSL_VULKAN %d\n")
     };
 
-    //if you hit this assert, you added the enum but did not add it to the array above
-    static_assert(sizeof(sSharpenShaderPermutations) == SSP_TOTAL * sizeof(leia::opengl::Shader::PermutationDefinition));
-
-} // namespace leia::sdk
+} // namespace sdk
+} // namespace leia

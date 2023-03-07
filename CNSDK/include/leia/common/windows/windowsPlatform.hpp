@@ -1,9 +1,7 @@
 #pragma once
 
 #include "leia/common/platform.hpp"
-
-#include <filesystem>
-namespace fs = std::filesystem;
+#include "leia/common/windows/windowsFilesystem.hpp"
 
 namespace leia {
 
