@@ -12,9 +12,10 @@ struct PSInput
     noperspective float2 Tex : TEXCOORD;
 };
 
-cbuffer LeiaSharpenShaderConstantBufferData : register(b0)
+cbuffer LeiaModelShaderConstantBufferData : register(b0)
 {
     float4x4 worldViewProj;
+    float alpha;
 };
 
 PSInput VSMain(VSInput input)
@@ -22,7 +23,7 @@ PSInput VSMain(VSInput input)
     PSInput output = (PSInput)0;
 
     output.Pos = mul(worldViewProj, float4(input.Pos, 1.0f));
-    output.Col = float4(input.Col, 1.0f);
+    output.Col = float4(input.Col, alpha);
     output.Tex = input.Tex;
 
     return output;

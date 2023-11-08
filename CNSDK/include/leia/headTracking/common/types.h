@@ -15,66 +15,87 @@ enum // leia_headtracking_status
 
 #pragma pack(push, 4)
 
-typedef leia_vector3 leia_headtracking_point;
-
-typedef struct leia_headtracking_moving_point_t {
-    leia_vector3 pos;
-    leia_vector3 vel;
-} leia_headtracking_moving_point;
+struct leia_headtracking_moving_point {
+    struct leia_vector3 pos;
+    struct leia_vector3 vel;
+};
 
 typedef uint32_t leia_headtracking_face_idx;
 
-typedef enum leia_headtracking_eye_idx_e {
+enum leia_headtracking_eye_idx {
     kLeiaHeadTrackingRightEyeIdx = 0,
     kLeiaHeadTrackingLeftEyeIdx,
     kLeiaHeadTrackingNumEyes
-} leia_headtracking_eye_idx;
+};
 
-typedef struct leia_headtracking_face_t {
+struct leia_headtracking_face {
     // Tracking point - 3D coordinate with camera transform and Kalman filter applied.
-    leia_headtracking_moving_point point;
+    struct leia_headtracking_moving_point point;
     // Pose angle
-    leia_vector3 angle;
+    struct leia_vector3                   angle;
     // // Index into the raw faces array.
-    leia_headtracking_face_idx rawFaceIndex;
-} leia_headtracking_face;
+    leia_headtracking_face_idx            rawFaceIndex;
+};
 
-typedef struct leia_headtracking_raw_face_t {
+struct leia_headtracking_raw_face {
     // Deprojected camera-space eye position.
-    leia_vector3 eyePoints[kLeiaHeadTrackingNumEyes];
+    struct leia_vector3        eyePoints[kLeiaHeadTrackingNumEyes];
     // The point of tracking, see Configuration::trackRightEye/Configuration::trackLeftEye.
-    leia_vector3 trackingPoint;
+    struct leia_vector3        trackingPoint;
     // Index into FaceDetector::Output::faces.
     leia_headtracking_face_idx detectedFaceIndex;
-} leia_headtracking_raw_face;
+};
 
-typedef struct leia_headtracking_detected_face_eye_t {
+struct leia_headtracking_detected_face_eye {
     // 2D coordinate on camera frame image plane (top-left origin)
-    leia_vector2d imageCoord;
+    struct leia_vector2d imageCoord;
     // Z component in camera-space (projected distance)
-    float depth;
-} leia_headtracking_detected_face_eye;
+    float                depth;
+};
 
-typedef struct leia_headtracking_detected_face_t {
-    leia_headtracking_detected_face_eye eyes[kLeiaHeadTrackingNumEyes];
+struct leia_headtracking_detected_face {
+    struct leia_headtracking_detected_face_eye eyes[kLeiaHeadTrackingNumEyes];
 
     // Head location in mm. The origin point is the location of the camera.
-    leia_vector3 posePosition;
+    struct leia_vector3 posePosition;
     // Head rotation in radians. The rotation is a left handed coordinate system.
-    leia_vector3 poseAngle;
-    uint32_t id;
-} leia_headtracking_detected_face;
+    struct leia_vector3 poseAngle;
+    uint32_t            id;
+};
 
 #define LEIA_HEADTRACKING_MAX_NUM_FACES 3
 
-typedef struct leia_headtracking_tracking_result_t {
-    int32_t num_faces;
-    leia_headtracking_face faces[LEIA_HEADTRACKING_MAX_NUM_FACES];
+struct leia_headtracking_tracking_result {
+    int32_t                       num_faces;
+    struct leia_headtracking_face faces[LEIA_HEADTRACKING_MAX_NUM_FACES];
 
-    leia_timestamp timestamp;
+    struct leia_timestamp timestamp;
 
     int32_t jumpFlag;
-} leia_headtracking_tracking_result;
+};
+
+struct leia_headtracking_frame;
+
+struct leia_headtracking_raw_faces {
+    int                               numFaces;
+    struct leia_headtracking_raw_face faces[LEIA_HEADTRACKING_MAX_NUM_FACES];
+};
+
+struct leia_headtracking_detected_faces {
+    int                                    numFaces;
+    struct leia_headtracking_detected_face faces[LEIA_HEADTRACKING_MAX_NUM_FACES];
+};
+
+// All timestamps are in the system clock space. See Platform::GetSystemTimeNs.
+struct leia_headtracking_frame_profiling {
+    int64_t cameraExposureTime;
+    // Face detector starts processing a camera frame
+    int64_t faceDetectorStartTime;
+    // Face detector ends processing a camera frame
+    int64_t faceDetectorEndTime;
+    // Engine sends frame to the user
+    int64_t apiTimestamp;
+};
 
 #pragma pack(pop)
 

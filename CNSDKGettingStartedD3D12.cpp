@@ -3,10 +3,8 @@
 #include "framework.h"
 
 // CNSDK includes
-#include "leia/sdk/sdk.hpp"
-#include "leia/sdk/interlacer.hpp"
-#include "leia/sdk/debugMenu.hpp"
-#include "leia/common/platform.hpp"
+#include "leia/core/cxx/core.hpp"
+#include "leia/core/cxx/interlacer.d3d12.hpp"
 
 // CNSDKGettingStartedD3D11 includes
 #include "CNSDKGettingStartedD3D12.h"
@@ -20,7 +18,7 @@
 #include "d3dx12.h"
 
 // CNSDK single library
-#pragma comment(lib, "CNSDK/lib/leiaSDK-faceTrackingInApp.lib")
+#pragma comment(lib, "CNSDK/lib/leiaCore-faceTrackingInApp.lib")
 
 // D3D12 libraries
 #pragma comment(lib, "d3d12.lib")
@@ -37,19 +35,22 @@ enum class eDemoMode { Spinning3DCube, StereoImage };
 void InitializeOffscreenFrameBuffer();
 
 // Global Variables.
-const wchar_t*                  g_windowTitle                  = L"CNSDK Getting Started D3D12 Sample";
-const wchar_t*                  g_windowClass                  = L"CNSDKGettingStartedD3D12WindowClass";
-int                             g_windowWidth                  = 1280;
-int                             g_windowHeight                 = 720;
-bool                            g_fullscreen                   = true;
-leia::sdk::ILeiaSDK*            g_sdk                          = nullptr;
-leia::sdk::IThreadedInterlacer* g_interlacer                   = nullptr;
-eDemoMode                       g_demoMode                     = eDemoMode::Spinning3DCube;
-float                           g_geometryDist                 = 500;
-bool                            g_perspective                  = true;
-float                           g_perspectiveCameraFiledOfView = 90.0f * 3.14159f / 180.0f;
-float                           g_orthographicCameraHeight     = 500.0f;
-bool                            g_showGUI                      = true;
+const wchar_t*                         g_windowTitle                  = L"CNSDK Getting Started D3D12 Sample";
+const wchar_t*                         g_windowClass                  = L"CNSDKGettingStartedD3D12WindowClass";
+int                                    g_windowWidth                  = 1280;
+int                                    g_windowHeight                 = 720;
+bool                                   g_fullscreen                   = true;
+std::unique_ptr<leia::Core>            g_sdk;
+std::unique_ptr<leia::InterlacerD3D12> g_interlacer                   = nullptr;
+eDemoMode                              g_demoMode                     = eDemoMode::Spinning3DCube;
+float                                  g_geometryDist                 = 500;
+bool                                   g_perspective                  = true;
+float                                  g_perspectiveCameraFiledOfView = 90.0f * 3.14159f / 180.0f;
+float                                  g_orthographicCameraHeight     = 500.0f;
+bool                                   g_showGUI                      = true;
+int                                    g_viewWidth                    = -1;
+int                                    g_viewHeight                   = -1;
+bool                                   g_sRGB                         = true;
 
 // Global D3D12 Variables.
 const int                     g_frameCount                        = 2;
@@ -59,6 +60,7 @@ ID3D12CommandAllocator*       g_commandAllocator[g_frameCount]    = {};
 IDXGISwapChain3*              g_swapChain                         = nullptr;
 int                           g_frameIndex                        = 0;
 DXGI_FORMAT                   g_swapChainFormat                   = DXGI_FORMAT_R8G8B8A8_UNORM;
+DXGI_FORMAT                   g_swapChainViewFormat               = g_sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 ID3D12DescriptorHeap*         g_srvHeap                           = nullptr;
 D3D12_CPU_DESCRIPTOR_HANDLE   g_srvFontCpuDescHandle              = {};
 D3D12_GPU_DESCRIPTOR_HANDLE   g_srvFontGpuDescHandle              = {};
@@ -85,8 +87,8 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenShaderResourceView       = {};
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenRenderTargetView         = {};
 ID3D12Resource*               g_offscreenDepthTexture             = nullptr;
 CD3DX12_CPU_DESCRIPTOR_HANDLE g_offscreenDepthStencilView         = {};
-const FLOAT                   g_offscreenColor[4]                 = { 0.0f, 0.2f, 0.5f, 1.0f };
-const FLOAT                   g_backbufferColor[4]                = { 0.0f, 0.4f, 0.0f, 1.0f };
+const FLOAT                   g_offscreenColor[4]                 = { 0.0f, 0.0f, 0.25f, 1.0f };
+const FLOAT                   g_backbufferColor[4]                = { 0.0f, 0.25f, 0.0f, 1.0f };
 ID3D12Resource*               g_vertexBuffer                      = nullptr;
 ID3D12Resource*               g_indexBuffer                       = nullptr;
 D3D12_VERTEX_BUFFER_VIEW      g_vertexBufferView                  = {};
@@ -184,7 +186,7 @@ bool ReadEntireFile(const char* filename, bool binary, char*& data, size_t& data
     return dataSize > 0;
 }
 
-bool ReadTGA(const char* filename, int& width, int& height, GLint& format, char*& data, int& dataSize)
+bool ReadTGA(const char* filename, int& width, int& height, char*& data, int& dataSize)
 {
     char* ptr = nullptr;
     size_t fileSize = 0;
@@ -226,8 +228,6 @@ bool ReadTGA(const char* filename, int& width, int& height, GLint& format, char*
             return false;
         }
 
-        format = (bitsPerPixel == 24) ? GL_BGR : GL_BGRA;
-
         data = new char[dataSize];
         memcpy(data, ptr, dataSize);
     }
@@ -243,8 +243,6 @@ bool ReadTGA(const char* filename, int& width, int& height, GLint& format, char*
             OnError(L"Invalid TGA file isn't 24/32-bit.");
             return false;
         }
-
-        format = (bitsPerPixel == 24) ? GL_BGR : GL_BGRA;
 
         PixelInfo Pixel = { 0 };
         int CurrentByte = 0;
@@ -298,6 +296,23 @@ bool ReadTGA(const char* filename, int& width, int& height, GLint& format, char*
     }
    
     return true;
+}
+
+float GetSRGB(float value)
+{
+    // If already in sRGB, no change.
+    if (g_sRGB)
+        return value;
+
+    // Convert linear->sRGB.
+    if (value <= 0.0f)
+        return 0.0f;
+    else if (value >= 1.0f)
+        return 1.0f;
+    else if (value <= 0.0031308f)
+        return value * 12.92f;
+    else
+        return 1.055f * pow(value, 1.0f / 2.4f) - 0.055f;
 }
 
 BOOL CALLBACK GetDefaultWindowStartPos_MonitorEnumProc(__in  HMONITOR hMonitor, __in  HDC hdcMonitor, __in  LPRECT lprcMonitor, __in  LPARAM dwData)
@@ -466,8 +481,15 @@ HRESULT ResizeBuffers(int width, int height)
             g_renderTargetViews[n] = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_rtvHeap->GetCPUDescriptorHandleForHeapStart());
             g_renderTargetViews[n].Offset(g_rtvHeapUsed);
 
+            // Create view for single slice.
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.ViewDimension                 = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtvDesc.Format                        = g_swapChainViewFormat;
+            rtvDesc.Texture2D.MipSlice            = 0;
+            rtvDesc.Texture2D.PlaneSlice          = 0;
+
             hr = g_swapChain->GetBuffer(n, _uuidof(ID3D12Resource), (void**) &g_renderTargets[n]);
-            g_device->CreateRenderTargetView(g_renderTargets[n], nullptr, g_renderTargetViews[n]);
+            g_device->CreateRenderTargetView(g_renderTargets[n], &rtvDesc, g_renderTargetViews[n]);
             
             g_rtvHeapUsed += g_rtvDescriptorSize;
         }
@@ -784,8 +806,15 @@ HRESULT InitializeD3D12(HWND hWnd)
             g_renderTargetViews[n] = CD3DX12_CPU_DESCRIPTOR_HANDLE(g_rtvHeap->GetCPUDescriptorHandleForHeapStart());
             g_renderTargetViews[n].Offset(g_rtvHeapUsed);//1, g_rtvHeapUsed);
 
+            // Create view for single slice.
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.ViewDimension                 = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtvDesc.Format                        = g_swapChainViewFormat;
+            rtvDesc.Texture2D.MipSlice            = 0;
+            rtvDesc.Texture2D.PlaneSlice          = 0;
+
             hr = g_swapChain->GetBuffer(n, _uuidof(ID3D12Resource), (void**) &g_renderTargets[n]);
-            g_device->CreateRenderTargetView(g_renderTargets[n], nullptr, g_renderTargetViews[n]);
+            g_device->CreateRenderTargetView(g_renderTargets[n], &rtvDesc, g_renderTargetViews[n]);
             
             g_rtvHeapUsed += g_rtvDescriptorSize;
         }
@@ -853,6 +882,45 @@ HRESULT InitializeD3D12(HWND hWnd)
 void InitializeCNSDK(HWND hWnd)
 {
     // Initialize SDK.
+    leia::CoreInitConfiguration coreConfig(nullptr);
+    coreConfig.SetFaceTrackingServerLogLevel(kLeiaLogLevelTrace);
+    coreConfig.SetFaceTrackingEnable(true);
+    g_sdk = std::make_unique<leia::Core>(coreConfig);
+
+    // Initialize interlacer.
+    leia::InterlacerInitConfiguration interlacerConfig;
+    interlacerConfig.SetUseAtlasForViews(true);
+    g_interlacer = std::make_unique<leia::InterlacerD3D12>(*g_sdk, interlacerConfig, g_device, g_commandQueue);
+    g_interlacer->SetSourceViewsSRGB(g_sRGB);
+
+    // Initialize interlacer GUI.
+    if (g_showGUI)
+    {
+        leia::InterlacerDebugMenuConfiguration debugMenuInitArgs = {};
+        debugMenuInitArgs.gui.surface = hWnd;
+        debugMenuInitArgs.gui.d3d12.device = g_device;
+        debugMenuInitArgs.gui.d3d12.deviceCbvSrvHeap = g_srvHeap;
+        debugMenuInitArgs.gui.d3d12.fontSrvCpuDescHandle = *((uint64_t*)&g_srvFontCpuDescHandle);
+        debugMenuInitArgs.gui.d3d12.fontSrvGpuDescHandle = *((uint64_t*)&g_srvFontGpuDescHandle);
+        debugMenuInitArgs.gui.d3d12.numFramesInFlight = g_frameCount;
+        debugMenuInitArgs.gui.d3d12.rtvFormat = g_swapChainViewFormat;
+        debugMenuInitArgs.gui.d3d12.commandList = g_guiCommandList;
+        debugMenuInitArgs.gui.graphicsAPI = LEIA_GRAPHICS_API_D3D12;
+        g_interlacer->InitializeGui(&debugMenuInitArgs, g_sRGB);
+    }
+
+    // Set stereo sliding mode.
+    const int numViews = g_interlacer->GetNumViews();
+    if (numViews != 2)
+        OnError(L"Unexpected number of views");
+
+    leia::device::Config* config = g_sdk->GetDeviceConfig();
+    g_viewWidth = config->viewResolution[0];
+    g_viewHeight = config->viewResolution[1];
+    g_sdk->ReleaseDeviceConfig(config);
+    
+    /*
+    // Initialize SDK.
     g_sdk = leia::sdk::CreateLeiaSDK();
     leia::PlatformInitArgs pia;
     g_sdk->InitializePlatform(pia);
@@ -885,7 +953,7 @@ void InitializeCNSDK(HWND hWnd)
     g_interlacer->SetInterlaceMode(leia::sdk::eLeiaInterlaceMode::StereoSliding);
     const int numViews = g_interlacer->GetNumViews();
     if (numViews != 2)
-        OnError(L"Unexpected number of views");
+        OnError(L"Unexpected number of views");*/
 }
 
 void LoadScene()
@@ -928,14 +996,16 @@ void LoadScene()
             {4,7,6,5}  // top
         };
 
+        float c = GetSRGB(0.5f);
+
         static const float faceColors[6][3] =
         {
-            {1,0,0},
-            {0,1,0},
-            {0,0,1},
-            {1,1,0},
-            {0,1,1},
-            {1,0,1}
+            {c,0,0},
+            {0,c,0},
+            {0,0,c},
+            {c,c,0},
+            {0,c,c},
+            {c,0,c}
         };
 
         std::vector<VERTEX> vertices;
@@ -1115,7 +1185,7 @@ void LoadScene()
 
         // Create vertex input layout.
         {
-            D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+            static D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
             {
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
                 { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -1208,7 +1278,7 @@ void LoadScene()
             psoDesc.SampleMask                      = UINT_MAX;
             psoDesc.PrimitiveTopologyType           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             psoDesc.NumRenderTargets                = 1;
-            psoDesc.RTVFormats[0]                   = DXGI_FORMAT_R8G8B8A8_UNORM;
+            psoDesc.RTVFormats[0]                   = g_sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.DSVFormat                       = DXGI_FORMAT_D32_FLOAT;
             psoDesc.SampleDesc.Count                = 1;
 
@@ -1223,10 +1293,9 @@ void LoadScene()
         // Load stereo image.
         int width = 0;
         int height = 0;
-        GLint format = 0;
         char* data = nullptr;
         int dataSize = 0;
-        ReadTGA("StereoBeerGlass.tga", width, height, format, data, dataSize);
+        ReadTGA("StereoBeerGlass.tga", width, height, data, dataSize);
 
         // D3D11 doesn't support RGB textures, so expand initial data from RGB->RGBA.
         unsigned char* convertedInitialData = nullptr;
@@ -1251,7 +1320,7 @@ void LoadScene()
         // Describe and create a Texture2D.
         D3D12_RESOURCE_DESC textureDesc = {};
         textureDesc.MipLevels          = 1;
-        textureDesc.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
+        textureDesc.Format             = g_sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
         textureDesc.Width              = width;
         textureDesc.Height             = height;
         textureDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
@@ -1364,8 +1433,8 @@ void InitializeOffscreenFrameBuffer()
     // On pass 1 we render to the left and on pass 2 we render to the right.
     
     // Use Leia's pre-defined view size (you can use a different size to suit your application).
-    const int width  = g_sdk->GetViewWidth() * 2;
-    const int height = g_sdk->GetViewHeight();
+    const int width  = g_viewWidth * 2;
+    const int height = g_viewHeight;
 
     {
         if (g_offscreenTexture != nullptr)
@@ -1386,7 +1455,7 @@ void InitializeOffscreenFrameBuffer()
     // Describe and create a Texture2D.
     D3D12_RESOURCE_DESC textureDesc = {};
     textureDesc.MipLevels          = 1;
-    textureDesc.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.Format             = g_sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
     textureDesc.Width              = width;
     textureDesc.Height             = height;
     textureDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
@@ -1398,10 +1467,10 @@ void InitializeOffscreenFrameBuffer()
     // Create resource.
     {
         D3D12_CLEAR_VALUE optimizedClearValue = {};
-        optimizedClearValue.Color[0] = g_offscreenColor[0];
-        optimizedClearValue.Color[1] = g_offscreenColor[1];
-        optimizedClearValue.Color[2] = g_offscreenColor[2];
-        optimizedClearValue.Color[3] = g_offscreenColor[3];
+        optimizedClearValue.Color[0] = GetSRGB(g_offscreenColor[0]);
+        optimizedClearValue.Color[1] = GetSRGB(g_offscreenColor[1]);
+        optimizedClearValue.Color[2] = GetSRGB(g_offscreenColor[2]);
+        optimizedClearValue.Color[3] = GetSRGB(g_offscreenColor[3]);
         optimizedClearValue.Format   = textureDesc.Format;
         
         CD3DX12_HEAP_PROPERTIES heapPropertiesDefault(D3D12_HEAP_TYPE_DEFAULT);
@@ -1508,8 +1577,8 @@ void RotateOrientation(mat3f& orientation, float x, float y, float z)
 
 void Render(float elapsedTime) 
 {
-    const int   viewWidth   = g_sdk->GetViewWidth();
-    const int   viewHeight  = g_sdk->GetViewHeight();
+    const int   viewWidth   = g_viewWidth;
+    const int   viewHeight  = g_viewHeight;
     const float aspectRatio = (float)viewWidth / (float)viewHeight;
 
     // Reset allocators.
@@ -1542,7 +1611,8 @@ void Render(float elapsedTime)
     if (g_demoMode == eDemoMode::StereoImage)
     {
         // Clear back-buffer to green.
-        g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], g_backbufferColor, 0, NULL);
+        const FLOAT color[4] = { GetSRGB(g_backbufferColor[0]), GetSRGB(g_backbufferColor[1]), GetSRGB(g_backbufferColor[2]), GetSRGB(g_backbufferColor[3]) };
+        g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], color, 0, NULL);
         g_commandList->Close();
 
         // Execute the command list.
@@ -1568,14 +1638,16 @@ void Render(float elapsedTime)
         }
 
         // Clear back-buffer to green.
-        g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], g_backbufferColor, 0, NULL);
+        const FLOAT backBufferColor[4] = { GetSRGB(g_backbufferColor[0]), GetSRGB(g_backbufferColor[1]), GetSRGB(g_backbufferColor[2]), GetSRGB(g_backbufferColor[3]) };
+        g_commandList->ClearRenderTargetView(g_renderTargetViews[g_frameIndex], backBufferColor, 0, NULL);
         g_commandList->ClearDepthStencilView(g_depthStencilViews[g_frameIndex], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
 
         // Transition offscreen render-target (intermediate stereo texture with views) from shader-input to render-target.
         TransitionResourceState(g_commandList, g_offscreenTexture, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
         // Clear offscreen render-target to blue
-        g_commandList->ClearRenderTargetView(g_offscreenRenderTargetView, g_offscreenColor, 0, NULL);
+        const FLOAT offscreenColor[4] = { GetSRGB(g_offscreenColor[0]), GetSRGB(g_offscreenColor[1]), GetSRGB(g_offscreenColor[2]), GetSRGB(g_offscreenColor[3]) };
+        g_commandList->ClearRenderTargetView(g_offscreenRenderTargetView, offscreenColor, 0, NULL);
         g_commandList->ClearDepthStencilView(g_offscreenDepthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
 
         // Render stereo views.
@@ -1584,28 +1656,20 @@ void Render(float elapsedTime)
             g_commandList->SetGraphicsRootConstantBufferView(0, g_constantBuffer[i]->GetGPUVirtualAddress());
 
             // Get camera properties.
-            glm::vec3 camPos = glm::vec3(0, 0, 0);
-            glm::vec3 camDir = glm::vec3(0, 1, 0);
-            glm::vec3 camUp = glm::vec3(0, 0, 1);
+            vec3f camPos = vec3f(0, 0, 0);
+            vec3f camDir = vec3f(0, 1, 0);
+            vec3f camUp  = vec3f(0, 0, 1);
 
             // Compute view position and projection matrix for view.
             vec3f viewPos = vec3f(0, 0, 0);
             mat4f cameraProjection;
             if (g_perspective)
             {
-                glm::mat4 viewProjMat;
-                glm::vec3 viewCamPos;
-                g_interlacer->GetConvergedPerspectiveViewInfo(i, camPos, camDir, camUp, g_perspectiveCameraFiledOfView, aspectRatio, 1.0f, 10000.0f, &viewCamPos, &viewProjMat);
-                cameraProjection = mat4f(viewProjMat);
-                viewPos = vec3f(viewCamPos);
+                g_interlacer->GetConvergedPerspectiveViewInfo(i, { camPos.e, 3 }, { camDir.e, 3 }, { camUp.e, 3 }, g_perspectiveCameraFiledOfView, aspectRatio, 1.0f, 10000.0f, { viewPos.e, 3 }, { cameraProjection.m, 16 }, nullptr, nullptr, nullptr);
             }
             else
             {
-                glm::mat4 viewProjMat;
-                glm::vec3 viewCamPos;
-                g_interlacer->GetConvergedOrthographicViewInfo(i, camPos, camDir, camUp, g_orthographicCameraHeight * aspectRatio, g_orthographicCameraHeight, 1.0f, 10000.0f, &viewCamPos, &viewProjMat);
-                cameraProjection = mat4f(viewProjMat);
-                viewPos = vec3f(viewCamPos);
+                g_interlacer->GetConvergedOrthographicViewInfo(i, { camPos.e, 3 }, { camDir.e, 3 }, { camUp.e, 3 }, g_orthographicCameraHeight * aspectRatio, g_orthographicCameraHeight, 1.0f, 10000.0f, { viewPos.e, 3 }, { cameraProjection.m, 16 }, nullptr, nullptr);
             }
 
             // Get camera transform.
@@ -1672,7 +1736,7 @@ void Render(float elapsedTime)
 
         // Perform interlacing.
         g_interlacer->SetSourceViewsSize(viewWidth, viewHeight, true);
-        g_interlacer->SetInterlaceViewTextureAtlas(g_offscreenTexture);
+        g_interlacer->SetSourceViews(g_offscreenTexture);
         g_interlacer->DoPostProcess(g_windowWidth, g_windowHeight, false, g_renderTargets[g_frameIndex]);
     }
 
@@ -1700,7 +1764,7 @@ void Render(float elapsedTime)
         g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
     }
 
-    g_swapChain->Present(0, 0);
+    g_swapChain->Present(1, 0);
 
     MoveToNextFrame();
 }
@@ -1805,7 +1869,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     // Initialize graphics.
     HRESULT hr = InitializeD3D12(hWnd);
     if (FAILED(hr))
-        OnError(L"Failed to initialize D3D11");
+        OnError(L"Failed to initialize D3D12");
 
     // Initialize CNSDK.
     InitializeCNSDK(hWnd);
@@ -1866,9 +1930,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
     // Disable Leia display backlight.
     g_sdk->SetBacklight(false);
-
-    // Cleanup.
-    g_sdk->Destroy();
     
     CloseHandle(g_fenceEvent);
 

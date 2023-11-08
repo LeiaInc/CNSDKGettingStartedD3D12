@@ -36,7 +36,6 @@
 
 
         // Constructors
-                 vec3f (glm::vec3 v) : x(v.x), y(v.y), z(v.z) {}
         explicit vec3f (float xyz) : x(xyz), y(xyz), z(xyz) {}
         explicit vec3f (float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
         explicit vec3f (const vec2f& xy, float _z) : x(xy.x), y(xy.y), z(_z) {}
@@ -392,12 +391,7 @@
             Wx = _Wx; Wy = _Wy; Wz = _Wz; Ww = _Ww;
         }
 
-        mat4f(const glm::mat4& m) : Xx(m[0].x), Xy(m[0].y), Xz(m[0].z), Xw(m[0].w),
-                                    Yx(m[1].x), Yy(m[1].y), Yz(m[1].z), Yw(m[1].w),
-                                    Zx(m[2].x), Zy(m[2].y), Zz(m[2].z), Zw(m[2].w),
-                                    Wx(m[3].x), Wy(m[3].y), Wz(m[3].z), Ww(m[3].w) {}
-
-         vec4f  operator[](int index) const { return e[index]; }
+        vec4f  operator[](int index) const { return e[index]; }
         vec4f& operator[](int index)       { return e[index]; }
 
         void setIdentity()

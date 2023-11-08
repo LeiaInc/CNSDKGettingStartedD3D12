@@ -1,12 +1,15 @@
-#version 330 core
+
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
 layout (location = 2) in vec2 aTexCoord;
 
-float SCR_WIDTH = 800 / 5;
-float SCR_HEIGHT = 600 / 5;
-float widthZ = 1.0/SCR_WIDTH;
-float heightZ = 1.0/SCR_HEIGHT;
+//float SCR_WIDTH = 800 / 5;
+//float SCR_HEIGHT = 600 / 5;
+//float widthZ = 1.0/SCR_WIDTH;
+//float heightZ = 1.0/SCR_HEIGHT;
+
+const float widthZ  = 0.00625f;
+const float heightZ = 0.008333f;
 
 uniform mat4 projection;
 
@@ -79,10 +82,10 @@ void main()
         TexCoord.y = uiSrc.y * srcHZ;
     }
 
-    locPos.x =  -1 + locPos.x;
-    locPos.y =  1 - locPos.y;
+    locPos.x =  -1.f + locPos.x;
+    locPos.y =  1.f - locPos.y;
 
-    TexCoord.y = 1 - TexCoord.y;
+    TexCoord.y = 1.f - TexCoord.y;
     
 
     gl_Position = locPos;

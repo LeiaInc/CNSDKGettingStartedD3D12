@@ -5,6 +5,7 @@ layout (location = 2) in vec2 aTexCoord;
 layout(binding = 0) uniform UniformBufferObject
 {
     mat4 worldViewProj;
+    float alpha;
 } ubo;
     
 layout (location = 0) out vec2 TexCoord;
@@ -16,5 +17,5 @@ void main()
     gl_Position =  ubo.worldViewProj * vec4((aPos), 1.0f);
     TexIdx = int(aCol.r);
     TexCoord = aTexCoord;
-    Color = vec4(aCol, 1.0f);
+    Color = vec4(aCol, ubo.alpha);
 }
